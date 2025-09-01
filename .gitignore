@@ -1,0 +1,6 @@
+/.idea/
+*.iml
+*.md
+/LICENSE
+*/target
+*/dependency-reduced-pom.xml

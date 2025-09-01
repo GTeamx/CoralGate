@@ -1,0 +1,18 @@
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>cloud.gteam</groupId>
+    <artifactId>CoralGate</artifactId>
+    <version>0.0.1</version>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>core</module>
+        <module>spigot</module>
+        <module>bungee</module>
+        <module>velocity</module>
+    </modules>
+
+    <properties>
+        <java.version>1.8</java.version>
+    </properties>
+</project>

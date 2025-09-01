@@ -1,0 +1,9 @@
+name: CoralGate
+version: '0.0.1'
+main: cloud.gteam.coralgate.SpigotPlugin
+api-version: '1.8'
+prefix: CoralGate
+authors: [ XIII___, Vagdedes2 ]
+description: A simple plugin to prevent server scanners from reaching your server.
+depend:
+  - packetevents

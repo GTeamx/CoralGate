@@ -1,0 +1,8 @@
+{
+  "id": "coralgate",
+  "name": "CoralGate",
+  "version": "0.0.1",
+  "description": "A simple plugin to prevent server scanners from reaching your server.",
+  "authors": ["XIII___, Vagdedes2"],
+  "main": "cloud.gteam.coralgate.VelocityPlugin"
+}
