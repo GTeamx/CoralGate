@@ -21,25 +21,14 @@ package cloud.gteam.coralgate.bridge;
 import cloud.gteam.coralgate.mappings.SpigotMappings;
 import cloud.gteam.coralgate.packetevents.mappings.enums.server.ServerPacketType;
 import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.manager.protocol.ProtocolManager;
-import com.github.retrooper.packetevents.protocol.player.User;
-import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 
 import java.net.SocketAddress;
 
 public class SpigotPlatformBridge implements PlatformBridge {
 
-    // TODO: Find a fix to send RESPONSE later.
-    // Don't use this right now honestly...
     @Override
     public void sendPacket(final SocketAddress socketAddress, final ServerPacketType serverPacketType, final Object packetWrapper) {
-
-        final ProtocolManager protocolManager = PacketEvents.getAPI().getProtocolManager();
-        final User user = protocolManager.getUser(socketAddress);
-
-        final PacketWrapper<?> packet = SpigotMappings.mapToPacketWrapper(serverPacketType, packetWrapper);
-        if (packet != null) protocolManager.sendPacketSilently(user, packet);
-
+        PacketEvents.getAPI().getProtocolManager().getUsers().stream().filter(filteredUser -> filteredUser.getAddress() == socketAddress).forEach(user -> user.sendPacketSilently(SpigotMappings.mapToPacketWrapper(serverPacketType, packetWrapper)));
     }
 
 }
