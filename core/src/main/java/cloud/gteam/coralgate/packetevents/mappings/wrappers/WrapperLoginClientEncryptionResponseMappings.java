@@ -18,7 +18,7 @@
 
 package cloud.gteam.coralgate.packetevents.mappings.wrappers;
 
-import cloud.gteam.coralgate.packetevents.mappings.utils.SaltSignatureMappings;
+import cloud.gteam.coralgate.packetevents.mappings.others.SaltSignatureMappings;
 
 public class WrapperLoginClientEncryptionResponseMappings {
 
