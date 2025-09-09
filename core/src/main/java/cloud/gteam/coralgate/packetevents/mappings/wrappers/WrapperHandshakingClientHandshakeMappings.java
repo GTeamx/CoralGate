@@ -19,11 +19,12 @@
 package cloud.gteam.coralgate.packetevents.mappings.wrappers;
 
 import cloud.gteam.coralgate.packetevents.mappings.enums.ConnectionStateMappings;
+import cloud.gteam.coralgate.packetevents.mappings.enums.client.ClientVersionMappings;
 
 public class WrapperHandshakingClientHandshakeMappings {
 
     private final int protocolVersion;
-    //private final ClientVersion; //TODO: map
+    private final ClientVersionMappings clientVersion;
     private final String serverAddress;
     private final int serverPort;
     private final ConnectionIntentionMappings intention;
@@ -31,6 +32,7 @@ public class WrapperHandshakingClientHandshakeMappings {
 
     public WrapperHandshakingClientHandshakeMappings(final int protocolVersion, final String serverAddress, final int serverPort, final ConnectionIntentionMappings intention, final ConnectionStateMappings targetState) {
         this.protocolVersion = protocolVersion;
+        this.clientVersion = ClientVersionMappings.getById(protocolVersion);
         this.serverAddress = serverAddress;
         this.serverPort = serverPort;
         this.intention = intention;
@@ -39,6 +41,10 @@ public class WrapperHandshakingClientHandshakeMappings {
 
     public int getProtocolVersion() {
         return this.protocolVersion;
+    }
+
+    public ClientVersionMappings getClientVersion() {
+        return this.clientVersion;
     }
 
     public String getServerAddress() {
