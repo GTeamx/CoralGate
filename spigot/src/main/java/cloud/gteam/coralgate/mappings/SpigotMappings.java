@@ -21,12 +21,9 @@ package cloud.gteam.coralgate.mappings;
 import cloud.gteam.coralgate.packetevents.mappings.enums.ConnectionStateMappings;
 import cloud.gteam.coralgate.packetevents.mappings.enums.client.ClientPacketType;
 import cloud.gteam.coralgate.packetevents.mappings.enums.server.ServerPacketType;
-import cloud.gteam.coralgate.packetevents.mappings.utils.SaltSignatureMappings;
-import cloud.gteam.coralgate.packetevents.mappings.utils.SignatureDataMappings;
-import cloud.gteam.coralgate.packetevents.mappings.wrappers.WrapperHandshakingClientHandshakeMappings;
-import cloud.gteam.coralgate.packetevents.mappings.wrappers.WrapperLoginClientEncryptionResponseMappings;
-import cloud.gteam.coralgate.packetevents.mappings.wrappers.WrapperLoginClientLoginStartMappings;
-import cloud.gteam.coralgate.packetevents.mappings.wrappers.WrapperStatusServerResponseMappings;
+import cloud.gteam.coralgate.packetevents.mappings.others.SaltSignatureMappings;
+import cloud.gteam.coralgate.packetevents.mappings.others.SignatureDataMappings;
+import cloud.gteam.coralgate.packetevents.mappings.wrappers.*;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
 import com.github.retrooper.packetevents.protocol.ConnectionState;
@@ -38,11 +35,12 @@ import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import com.github.retrooper.packetevents.wrapper.handshaking.client.WrapperHandshakingClientHandshake;
 import com.github.retrooper.packetevents.wrapper.login.client.WrapperLoginClientEncryptionResponse;
 import com.github.retrooper.packetevents.wrapper.login.client.WrapperLoginClientLoginStart;
+import com.github.retrooper.packetevents.wrapper.status.server.WrapperStatusServerPong;
 import com.github.retrooper.packetevents.wrapper.status.server.WrapperStatusServerResponse;
 
-import java.util.Optional;
-
 public final class SpigotMappings {
+
+    /// Client to Server
 
     public static ClientPacketType mapToClientType(final PacketReceiveEvent packetReceiveEvent) {
 
@@ -79,7 +77,7 @@ public final class SpigotMappings {
                 final WrapperLoginClientLoginStart originalLogin = new WrapperLoginClientLoginStart(packetReceiveEvent);
                 return new WrapperLoginClientLoginStartMappings(
                         originalLogin.getUsername(),
-                        SpigotMappings.mapSignatureData(originalLogin.getSignatureData()),
+                        SpigotMappings.mapSignatureData(originalLogin.getSignatureData().orElse(null)),
                         originalLogin.getPlayerUUID().orElse(null)
                 );
 
@@ -89,7 +87,7 @@ public final class SpigotMappings {
                 return new WrapperLoginClientEncryptionResponseMappings(
                         originalEncryption.getEncryptedSharedSecret(),
                         originalEncryption.getEncryptedVerifyToken().orElse(null),
-                        SpigotMappings.mapSaltSignature(originalEncryption.getSaltSignature())
+                        SpigotMappings.mapSaltSignature(originalEncryption.getSaltSignature().orElse(null))
                 );
 
             default:
@@ -145,13 +143,23 @@ public final class SpigotMappings {
 
     }
 
-    public static SignatureDataMappings mapSignatureData(final Optional<SignatureData> originalSignatureData) {
-        return originalSignatureData.map(signatureData -> new SignatureDataMappings(signatureData.getTimestamp(), signatureData.getPublicKey(), signatureData.getSignature())).orElse(null);
+    public static SignatureDataMappings mapSignatureData(final SignatureData signatureData) {
+
+        if (signatureData == null) return null;
+
+        return new SignatureDataMappings(signatureData.getTimestamp(), signatureData.getPublicKey(), signatureData.getSignature());
+
     }
 
-    public static SaltSignatureMappings mapSaltSignature(final Optional<SaltSignature> originalSaltSignature) {
-        return originalSaltSignature.map(saltSignature -> new SaltSignatureMappings(saltSignature.getSalt(), saltSignature.getSignature())).orElse(null);
+    public static SaltSignatureMappings mapSaltSignature(final SaltSignature saltSignature) {
+
+        if (saltSignature == null) return null;
+
+        return new SaltSignatureMappings(saltSignature.getSalt(), saltSignature.getSignature());
+
     }
+
+    ///  Server to Client
 
     public static ServerPacketType mapToServerType(final PacketSendEvent packetSendEvent) {
 
@@ -167,32 +175,6 @@ public final class SpigotMappings {
 
     }
 
-    public static PacketTypeCommon mapToPacketType(final ServerPacketType serverPacketType) {
-
-        switch (serverPacketType) {
-
-            case RESPONSE:
-                return PacketType.Status.Server.RESPONSE;
-
-            case PONG:
-                return PacketType.Status.Server.PONG;
-
-            case ENCRYPTION_REQUEST:
-                return PacketType.Login.Server.ENCRYPTION_REQUEST;
-
-            case SET_COMPRESSION:
-                return PacketType.Login.Server.SET_COMPRESSION;
-
-            case LOGIN_SUCCESS:
-                return PacketType.Login.Server.LOGIN_SUCCESS;
-
-            default:
-                return null;
-
-        }
-
-    }
-
     public static Object mapToWrapper(final PacketSendEvent packetSendEvent, final ServerPacketType serverPacketType) {
 
         switch (serverPacketType) {
@@ -200,6 +182,10 @@ public final class SpigotMappings {
             case RESPONSE:
                 final WrapperStatusServerResponse originalResponse = new WrapperStatusServerResponse(packetSendEvent);
                 return new WrapperStatusServerResponseMappings(originalResponse.getComponentJson());
+
+            case PONG:
+                final WrapperStatusServerPong originalPong = new WrapperStatusServerPong(packetSendEvent);
+                return new WrapperStatusServerPongMappings(originalPong.getTime());
 
             default:
                 return null;
@@ -215,6 +201,10 @@ public final class SpigotMappings {
             case RESPONSE:
                 final WrapperStatusServerResponseMappings mappedResponse = (WrapperStatusServerResponseMappings) packetWrapper;
                 return new WrapperStatusServerResponse(mappedResponse.getComponentJson());
+
+            case PONG:
+                final WrapperStatusServerPongMappings mappedPong = (WrapperStatusServerPongMappings) packetWrapper;
+                return new WrapperStatusServerPong(mappedPong.getTime());
 
             default:
                 return null;
