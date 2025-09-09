@@ -1,5 +1,5 @@
 name: CoralGate
 main: cloud.gteam.coralgate.BungeePlugin
-version: 0.0.1
+version: 0.1.0
 authors: [ XIII___, Vagdedes2 ]
 description: A simple plugin to prevent server scanners from reaching your server.
