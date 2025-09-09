@@ -113,7 +113,7 @@ public class NetworkProcessor {
             // Client login.
             if (wrapperHandshakingClientHandshakeMappings.getIntention() == WrapperHandshakingClientHandshakeMappings.ConnectionIntentionMappings.LOGIN && wrapperHandshakingClientHandshakeMappings.getNextConnectionState() == ConnectionStateMappings.LOGIN) {
 
-                PluginCore.getLogger().info("Version " + wrapperHandshakingClientHandshakeMappings.getClientVersion() + " for " + socketIp);
+                //PluginCore.getLogger().info("Version " + wrapperHandshakingClientHandshakeMappings.getClientVersion() + " for " + socketIp);
 
                 // First connection step.
                 this.connectionState.put(socketAddress, this.connectionState.getOrDefault(socketAddress, 0) + 1);
@@ -350,7 +350,7 @@ public class NetworkProcessor {
 
                 if (!blocked) {
 
-                    PluginCore.getLogger().info("Allowed connection to " + socketIp);
+                    //PluginCore.getLogger().info("Allowed connection to " + socketIp);
 
                     this.pluginCore.getPlatformBridge().sendPacket(socketAddress, serverPacketType, packetWrapper);
 
