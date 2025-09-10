@@ -31,7 +31,7 @@ import java.util.List;
 @Plugin(
     id = "velocity",
     name = "velocity",
-    version = "0.0.1"
+    version = "0.1.0"
     ,description = "A simple plugin to prevent server scanners from reaching your server."
     ,authors = {"XIII___, Vagdedes2"}
 )

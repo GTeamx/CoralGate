@@ -18,7 +18,7 @@
 
 package cloud.gteam.coralgate.packetevents.mappings.wrappers;
 
-import cloud.gteam.coralgate.packetevents.mappings.utils.SignatureDataMappings;
+import cloud.gteam.coralgate.packetevents.mappings.others.SignatureDataMappings;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;

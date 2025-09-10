@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cloud.gteam.coralgate.packetevents.mappings.utils;
+package cloud.gteam.coralgate.packetevents.mappings.others;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;

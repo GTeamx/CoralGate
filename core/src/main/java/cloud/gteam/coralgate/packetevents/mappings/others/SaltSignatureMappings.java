@@ -16,19 +16,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cloud.gteam.coralgate.bridge;
+package cloud.gteam.coralgate.packetevents.mappings.others;
 
-import cloud.gteam.coralgate.mappings.SpigotMappings;
-import cloud.gteam.coralgate.packetevents.mappings.enums.server.ServerPacketType;
-import com.github.retrooper.packetevents.PacketEvents;
+public class SaltSignatureMappings {
 
-import java.net.SocketAddress;
+    private final long salt;
+    private final byte[] signature;
 
-public class SpigotPlatformBridge implements PlatformBridge {
+    public SaltSignatureMappings(long salt, byte[] signature) {
+        this.salt = salt;
+        this.signature = signature;
+    }
 
-    @Override
-    public void sendPacket(final SocketAddress socketAddress, final ServerPacketType serverPacketType, final Object packetWrapper) {
-        PacketEvents.getAPI().getProtocolManager().getUsers().stream().filter(filteredUser -> filteredUser.getAddress() == socketAddress).forEach(user -> user.sendPacketSilently(SpigotMappings.mapToPacketWrapper(serverPacketType, packetWrapper)));
+    public long getSalt() {
+        return this.salt;
+    }
+
+    public byte[] getSignature() {
+        return this.signature;
     }
 
 }

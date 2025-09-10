@@ -16,24 +16,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cloud.gteam.coralgate.packetevents.mappings.utils;
+package cloud.gteam.coralgate.packetevents.mappings.wrappers;
 
-public class SaltSignatureMappings {
+public class WrapperStatusServerPongMappings {
 
-    private final long salt;
-    private final byte[] signature;
+    private final long time;
 
-    public SaltSignatureMappings(long salt, byte[] signature) {
-        this.salt = salt;
-        this.signature = signature;
+    public WrapperStatusServerPongMappings(final long time) {
+        this.time = time;
     }
 
-    public long getSalt() {
-        return this.salt;
-    }
-
-    public byte[] getSignature() {
-        return this.signature;
+    public long getTime() {
+        return this.time;
     }
 
 }

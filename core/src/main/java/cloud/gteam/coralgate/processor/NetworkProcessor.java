@@ -26,13 +26,11 @@ import cloud.gteam.coralgate.packetevents.mappings.enums.server.ServerPacketType
 import cloud.gteam.coralgate.packetevents.mappings.wrappers.WrapperHandshakingClientHandshakeMappings;
 import cloud.gteam.coralgate.packetevents.mappings.wrappers.WrapperLoginClientEncryptionResponseMappings;
 import cloud.gteam.coralgate.packetevents.mappings.wrappers.WrapperLoginClientLoginStartMappings;
-import cloud.gteam.coralgate.packetevents.mappings.wrappers.WrapperStatusServerResponseMappings;
 import cloud.gteam.coralgate.util.APIUtils;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 public class NetworkProcessor {
 
@@ -67,24 +65,6 @@ public class NetworkProcessor {
 
         // The port is ok, continue.
         } else if (clientPacketType == ClientPacketType.PING || clientPacketType == ClientPacketType.REQUEST || clientPacketType == ClientPacketType.HANDSHAKE) {
-
-            // Check if the IP is not blocked before processing further.
-//            try {
-//
-//                // Cancel the packet if the IP is blocked by CoralGate's API.
-//                if (APIUtils.isIpBlocked(socketIp).get(3000, TimeUnit.MILLISECONDS)) {
-//
-//                    // Log blocked ip.
-//                    PluginCore.getLogger().severe("IP is blocked by CoralGate's API. Closing connection from " + socketAddress + ". [C->S | " + clientPacketType.name() + " | " + this.connectionState.getOrDefault(socketAddress, 0) + "]");
-//
-//                    // Cancel the packet and close the connection.
-//                    return PacketAction.DISCONNECT;
-//
-//                }
-//
-//            } catch (final Exception e) {
-//                PluginCore.getLogger().severe("Couldn't fetch the blocked status of an IP. Is the API down? See error: " + e.getMessage());
-//            }
 
             // This is the lowest dynamic port used by Windows & Mac.
             // Since Linux players are "rare", we'll issue a warning statement about them.
@@ -133,6 +113,8 @@ public class NetworkProcessor {
             // Client login.
             if (wrapperHandshakingClientHandshakeMappings.getIntention() == WrapperHandshakingClientHandshakeMappings.ConnectionIntentionMappings.LOGIN && wrapperHandshakingClientHandshakeMappings.getNextConnectionState() == ConnectionStateMappings.LOGIN) {
 
+                //PluginCore.getLogger().info("Version " + wrapperHandshakingClientHandshakeMappings.getClientVersion() + " for " + socketIp);
+
                 // First connection step.
                 this.connectionState.put(socketAddress, this.connectionState.getOrDefault(socketAddress, 0) + 1);
 
@@ -163,6 +145,22 @@ public class NetworkProcessor {
 
                 // If the handshake and login procedure are good while not having a bot looking name, continue.
                 } else {
+
+                    // Check if the IP is blocked by CoralGate's API.
+                    try {
+
+                        if (APIUtils.isIpBlocked(socketIp).get()) {
+
+                            // Log blocked ip.
+                            PluginCore.getLogger().severe("IP is blocked by CoralGate's API. Closing connection from " + socketAddress + ". [C->S | " + clientPacketType.name() + " | " + this.connectionState.getOrDefault(socketAddress, 0) + "]");
+
+                            return PacketAction.DISCONNECT;
+
+                        }
+
+                    } catch (final Exception e) {
+                        PluginCore.getLogger().severe("Couldn't fetch the blocked status of an IP. Is the API down? See error: " + e.getMessage());
+                    }
 
                     this.connectionState.put(socketAddress, this.connectionState.getOrDefault(socketAddress, 0) + 1);
 
@@ -297,7 +295,7 @@ public class NetworkProcessor {
             return PacketAction.NONE;
 
         // Client should have sent the encryption response (if online mode).
-        } else if (serverPacketType == ServerPacketType.SET_COMPRESSION) {
+        } else if (serverPacketType == ServerPacketType.SET_COMPRESSION) { // TODO: Check if 'network-compression-threshold' is not -1, if it is, skip this
 
             // Check if it did. If yes, continue.
             if (this.connectionState.getOrDefault(socketAddress, 0) == (this.pluginCore.isOnlineMode() ? 4 : 2)) {
@@ -347,7 +345,22 @@ public class NetworkProcessor {
         // Whitelisted packets that should not be blocked, even if procedure is not complete.
         if (serverPacketType == ServerPacketType.RESPONSE || serverPacketType == ServerPacketType.PONG) {
 
-            return PacketAction.NONE;
+            // Don't send back the packet if the IP is blocked by CoralGate's API.
+            APIUtils.isIpBlocked(socketIp).thenAccept(blocked -> {
+
+                if (!blocked) {
+
+                    //PluginCore.getLogger().info("Allowed connection to " + socketIp);
+
+                    this.pluginCore.getPlatformBridge().sendPacket(socketAddress, serverPacketType, packetWrapper);
+
+                // Log blocked ip.
+                } else PluginCore.getLogger().severe("IP is blocked by CoralGate's API. Closing connection from " + socketAddress + ". [S->C | " + serverPacketType.name() + " | " + this.connectionState.getOrDefault(socketAddress, 0) + "]");
+
+            });
+
+            // Send packet later if the IP is not blocked.
+            return PacketAction.CANCEL;
 
         }
 
