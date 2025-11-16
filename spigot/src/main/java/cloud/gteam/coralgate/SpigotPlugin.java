@@ -18,8 +18,7 @@
 
 package cloud.gteam.coralgate;
 
-import cloud.gteam.coralgate.bridge.SpigotPlatformBridge;
-import cloud.gteam.coralgate.listener.SpigotNetworkListener;
+import cloud.gteam.coralgate.processor.NetworkProcessor;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import org.bukkit.Bukkit;
@@ -32,15 +31,13 @@ public final class SpigotPlugin extends JavaPlugin {
     @Override
     public void onLoad() {
         PacketEvents.getAPI().getEventManager().registerListener(
-                new SpigotNetworkListener(this), PacketListenerPriority.HIGHEST);
+                new NetworkProcessor(getPluginCore()), PacketListenerPriority.HIGHEST);
     }
 
     @Override
     public void onEnable() {
 
-        this.pluginCore.onEnable(Bukkit.getOnlineMode());
-
-        this.pluginCore.setPlatformBridge(new SpigotPlatformBridge());
+        this.pluginCore.onEnable(Bukkit.getOnlineMode(), "server.properties");
 
     }
 
