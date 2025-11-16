@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cloud.gteam.coralgate.util;
+package cloud.gteam.coralgate.utils;
 
 import cloud.gteam.coralgate.PluginCore;
 import com.jsoniter.JsonIterator;
