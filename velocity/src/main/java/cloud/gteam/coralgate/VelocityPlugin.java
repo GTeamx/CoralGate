@@ -18,57 +18,38 @@
 
 package cloud.gteam.coralgate;
 
-import com.google.inject.Inject;
+import cloud.gteam.coralgate.processor.NetworkProcessor;
+import cloud.gteam.coralgate.utils.ConfigUtils;
+import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
-import com.velocitypowered.api.plugin.Plugin;
-import org.slf4j.Logger;
+import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.List;
-
-@Plugin(
-    id = "velocity",
-    name = "velocity",
-    version = "0.1.0"
-    ,description = "A simple plugin to prevent server scanners from reaching your server."
-    ,authors = {"XIII___, Vagdedes2"}
-)
-public class VelocityPlugin {
+public final class VelocityPlugin {
 
     private final PluginCore pluginCore = new PluginCore();
 
-    @Inject private Logger logger;
-
     @Subscribe
-    public void onProxyInitialization(final ProxyInitializeEvent event) {
+    public void onProxyInitialization(final ProxyInitializeEvent proxyInitializeEvent) {
 
-        this.pluginCore.onEnable(isOnlineMode());
+        // onLoad equivalent
+        PacketEvents.getAPI().getEventManager().registerListener(
+                new NetworkProcessor(getPluginCore()), PacketListenerPriority.HIGHEST);
+
+        this.pluginCore.onEnable(ConfigUtils.isOnlineMode("velocity.toml"), "velocity.toml");
 
     }
 
-    private boolean isOnlineMode() {
+    @Subscribe
+    public void onProxyShutdown(final ProxyShutdownEvent proxyShutdownEvent) {
 
-        try {
+        // Plugin shutdown logic
 
-            final List<String> lines = Files.readAllLines(Paths.get("velocity.toml"));
-            for (final String line : lines) {
+    }
 
-                if (line.trim().startsWith("online-mode")) {
-
-                    return line.contains("true");
-
-                }
-
-            }
-
-        } catch (final Exception e) {
-            this.logger.error("Couldn't fetch velocity.toml online-mode. CoralGate might not work as expected. See error:{}", e.getMessage());
-        }
-
-        return false;
-
+    public PluginCore getPluginCore() {
+        return this.pluginCore;
     }
 
 }
