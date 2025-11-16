@@ -18,31 +18,24 @@
 
 package cloud.gteam.coralgate;
 
-import cloud.gteam.coralgate.bridge.PlatformBridge;
-import cloud.gteam.coralgate.processor.NetworkProcessor;
+import cloud.gteam.coralgate.utils.ConfigUtils;
 
 import java.util.logging.Logger;
 
-public class PluginCore {
+public final class PluginCore {
 
     private static final Logger logger = Logger.getLogger("CoralGate");
 
     private boolean onlineMode;
-    private PlatformBridge platformBridge;
+    private int compressionThreshold;
 
-    private NetworkProcessor networkProcessor;
-
-    public void onEnable(final boolean onlineMode) {
+    public void onEnable(final boolean onlineMode, final String configFileName) {
 
         logger.info("Startup sequence of CoralGate...");
 
         this.onlineMode = onlineMode;
 
-        logger.info("Initializing NetworkProcessor...");
-
-        networkProcessor = new NetworkProcessor(this);
-
-        logger.info("NetworkProcessor initialized!");
+        this.compressionThreshold = ConfigUtils.getCompressionThreshold(configFileName);
 
         logger.info("CoralGate is ready to use!");
 
@@ -56,17 +49,8 @@ public class PluginCore {
         return this.onlineMode;
     }
 
-    public PlatformBridge getPlatformBridge() {
-        return this.platformBridge;
-    }
-
-    public void setPlatformBridge(final PlatformBridge platformBridge) {
-        this.platformBridge = platformBridge;
-        logger.info("New PlatformBridge initialized: " + platformBridge.getClass().getSimpleName());
-    }
-
-    public NetworkProcessor getNetworkProcessor() {
-        return this.networkProcessor;
+    public int getCompressionThreshold() {
+        return this.compressionThreshold;
     }
 
 }
