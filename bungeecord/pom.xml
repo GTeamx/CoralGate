@@ -10,14 +10,14 @@
         <version>0.2.0</version>
     </parent>
 
-    <artifactId>CoralGate-Velocity</artifactId>
+    <artifactId>CoralGate-BungeeCord</artifactId>
     <version>0.1.0</version>
     <packaging>jar</packaging>
 
-    <name>velocity</name>
+    <name>bungeecord</name>
 
     <properties>
-        <java.version>17</java.version>
+        <java.version>1.8</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -61,11 +61,6 @@
             <id>codemc-releases</id>
             <url>https://repo.codemc.io/repository/maven-releases/</url>
         </repository>
-        <!-- Velocity repo !-->
-        <repository>
-            <id>papermc-repo</id>
-            <url>https://repo.papermc.io/repository/maven-public/</url>
-        </repository>
     </repositories>
 
     <dependencies>
@@ -81,9 +76,9 @@
             <version>${core.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.velocitypowered</groupId>
-            <artifactId>velocity-api</artifactId>
-            <version>3.4.0-SNAPSHOT</version>
+            <groupId>net.md-5</groupId>
+            <artifactId>bungeecord-api</artifactId>
+            <version>1.21-R0.4</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

@@ -19,30 +19,30 @@
 package cloud.gteam.coralgate;
 
 import cloud.gteam.coralgate.processor.NetworkProcessor;
-import cloud.gteam.coralgate.utils.ConfigUtils;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
-import com.velocitypowered.api.event.Subscribe;
-import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
-import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
+import org.bukkit.Bukkit;
+import org.bukkit.plugin.java.JavaPlugin;
 
-public final class VelocityPlugin {
+public final class PaperPlugin extends JavaPlugin {
 
     private final PluginCore pluginCore = new PluginCore();
 
-    @Subscribe
-    public void onProxyInitialization(final ProxyInitializeEvent proxyInitializeEvent) {
-
-        // onLoad equivalent
+    @Override
+    public void onLoad() {
         PacketEvents.getAPI().getEventManager().registerListener(
                 new NetworkProcessor(getPluginCore()), PacketListenerPriority.HIGHEST);
+    }
 
-        this.pluginCore.onEnable(ConfigUtils.isOnlineMode("velocity.toml"), "velocity.toml");
+    @Override
+    public void onEnable() {
+
+        this.pluginCore.onEnable(Bukkit.getOnlineMode(), "server.properties");
 
     }
 
-    @Subscribe
-    public void onProxyShutdown(final ProxyShutdownEvent proxyShutdownEvent) {
+    @Override
+    public void onDisable() {
 
         // Plugin shutdown logic
 
@@ -51,5 +51,4 @@ public final class VelocityPlugin {
     public PluginCore getPluginCore() {
         return this.pluginCore;
     }
-
 }

@@ -19,30 +19,41 @@
 package cloud.gteam.coralgate;
 
 import cloud.gteam.coralgate.processor.NetworkProcessor;
-import cloud.gteam.coralgate.utils.ConfigUtils;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
-import com.velocitypowered.api.event.Subscribe;
-import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
-import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
+import net.md_5.bungee.api.ProxyServer;
+import net.md_5.bungee.api.plugin.Plugin;
 
-public final class VelocityPlugin {
+public final class BungeePlugin extends Plugin {
 
     private final PluginCore pluginCore = new PluginCore();
+    private boolean canRun = false;
 
-    @Subscribe
-    public void onProxyInitialization(final ProxyInitializeEvent proxyInitializeEvent) {
+    @Override
+    public void onLoad() {
 
-        // onLoad equivalent
+        // Check if PacketEvents (code name: 'packetevents) is installed
+        if (ProxyServer.getInstance().getPluginManager().getPlugin("packetevents") == null) {
+
+            PluginCore.getLogger().severe("PacketEvents is required to run CoralGate! Please install PacketEvents in your plugins folder.");
+            return;
+
+        } else canRun = true;
+
         PacketEvents.getAPI().getEventManager().registerListener(
                 new NetworkProcessor(getPluginCore()), PacketListenerPriority.HIGHEST);
 
-        this.pluginCore.onEnable(ConfigUtils.isOnlineMode("velocity.toml"), "velocity.toml");
+    }
+
+    @Override
+    public void onEnable() {
+
+        if (canRun) this.pluginCore.onEnable(this.getProxy().getConfig().isOnlineMode(), "config.yml");
 
     }
 
-    @Subscribe
-    public void onProxyShutdown(final ProxyShutdownEvent proxyShutdownEvent) {
+    @Override
+    public void onDisable() {
 
         // Plugin shutdown logic
 
