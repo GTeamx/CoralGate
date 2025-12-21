@@ -20,36 +20,39 @@ package cloud.gteam.coralgate;
 
 import cloud.gteam.coralgate.processor.NetworkProcessor;
 import cloud.gteam.coralgate.utils.ConfigUtils;
+import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 
+import java.util.logging.Logger;
+
 public final class VelocityPlugin {
 
-    private final PluginCore pluginCore = new PluginCore();
+    private final CorePlugin corePlugin = new CorePlugin();
 
     @Subscribe
     public void onProxyInitialization(final ProxyInitializeEvent proxyInitializeEvent) {
 
-        // onLoad equivalent
+        // onLoad equivalent.
         PacketEvents.getAPI().getEventManager().registerListener(
-                new NetworkProcessor(getPluginCore()), PacketListenerPriority.HIGHEST);
+                new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
 
-        this.pluginCore.onEnable(ConfigUtils.isOnlineMode("velocity.toml"), "velocity.toml");
+        this.corePlugin.onEnable(Logger.getLogger("CoralGate"), ConfigUtils.isOnlineMode("velocity.toml"), "velocity.toml", PlatformUtils.loadProperties(this.getClass()));
 
     }
 
     @Subscribe
     public void onProxyShutdown(final ProxyShutdownEvent proxyShutdownEvent) {
 
-        // Plugin shutdown logic
+        this.corePlugin.onDisable();
 
     }
 
-    public PluginCore getPluginCore() {
-        return this.pluginCore;
+    public CorePlugin getCorePlugin() {
+        return this.corePlugin;
     }
 
 }
