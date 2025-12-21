@@ -18,26 +18,52 @@
 
 package cloud.gteam.coralgate;
 
+import cloud.gteam.coralgate.api.APIManager;
 import cloud.gteam.coralgate.utils.ConfigUtils;
 
+import java.util.Properties;
 import java.util.logging.Logger;
 
-public final class PluginCore {
+public final class CorePlugin {
 
-    private static final Logger logger = Logger.getLogger("CoralGate");
+    private static Logger logger;
 
     private boolean onlineMode;
     private int compressionThreshold;
 
-    public void onEnable(final boolean onlineMode, final String configFileName) {
+    private String platformName;
+    private String platformVersion;
+    private String apiVersion;
+
+    private APIManager apiManager;
+
+    public void onEnable(final Logger logger, final boolean onlineMode, final String configFileName, final Properties platformProperties) {
+
+        CorePlugin.logger = logger;
 
         logger.info("Startup sequence of CoralGate...");
+
+        this.platformName = platformProperties.getProperty("platform-name");
+        this.platformVersion = platformProperties.getProperty("platform-version");
+        this.apiVersion = platformProperties.getProperty("api-version");
+
+        logger.info("Loading platform '" + this.platformName + "' version '" + this.platformVersion + "', implemented against core version '" + platformProperties.getProperty("core-version") + "'...");
+
+        this.apiManager = new APIManager(this, this.apiVersion);
+
+        logger.info("Using API version '" + this.apiVersion + "'.");
 
         this.onlineMode = onlineMode;
 
         this.compressionThreshold = ConfigUtils.getCompressionThreshold(configFileName);
 
         logger.info("CoralGate is ready to use!");
+
+    }
+
+    public void onDisable() {
+
+        if (this.apiManager != null) this.apiManager.shutdown();
 
     }
 
@@ -51,6 +77,18 @@ public final class PluginCore {
 
     public int getCompressionThreshold() {
         return this.compressionThreshold;
+    }
+
+    public String getPlatformName() {
+        return this.platformName;
+    }
+
+    public String getPlatformVersion() {
+        return this.platformVersion;
+    }
+
+    public APIManager getApiManager() {
+        return this.apiManager;
     }
 
 }
