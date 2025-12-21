@@ -19,48 +19,37 @@
 package cloud.gteam.coralgate;
 
 import cloud.gteam.coralgate.processor.NetworkProcessor;
+import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
-import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.plugin.Plugin;
 
 public final class BungeePlugin extends Plugin {
 
-    private final PluginCore pluginCore = new PluginCore();
-    private boolean canRun = false;
+    private final CorePlugin corePlugin = new CorePlugin();
 
     @Override
     public void onLoad() {
-
-        // Check if PacketEvents (code name: 'packetevents) is installed
-        if (ProxyServer.getInstance().getPluginManager().getPlugin("packetevents") == null) {
-
-            PluginCore.getLogger().severe("PacketEvents is required to run CoralGate! Please install PacketEvents in your plugins folder.");
-            return;
-
-        } else canRun = true;
-
         PacketEvents.getAPI().getEventManager().registerListener(
-                new NetworkProcessor(getPluginCore()), PacketListenerPriority.HIGHEST);
-
+                new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
     }
 
     @Override
     public void onEnable() {
 
-        if (canRun) this.pluginCore.onEnable(this.getProxy().getConfig().isOnlineMode(), "config.yml");
+        this.corePlugin.onEnable(this.getLogger(), this.getProxy().getConfig().isOnlineMode(), "config.yml", PlatformUtils.loadProperties(this.getClass()));
 
     }
 
     @Override
     public void onDisable() {
 
-        // Plugin shutdown logic
+        this.corePlugin.onDisable();
 
     }
 
-    public PluginCore getPluginCore() {
-        return this.pluginCore;
+    public CorePlugin getCorePlugin() {
+        return this.corePlugin;
     }
 
 }
