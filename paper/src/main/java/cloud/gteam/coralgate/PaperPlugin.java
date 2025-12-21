@@ -19,6 +19,7 @@
 package cloud.gteam.coralgate;
 
 import cloud.gteam.coralgate.processor.NetworkProcessor;
+import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import org.bukkit.Bukkit;
@@ -26,29 +27,30 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class PaperPlugin extends JavaPlugin {
 
-    private final PluginCore pluginCore = new PluginCore();
+    private final CorePlugin corePlugin = new CorePlugin();
 
     @Override
     public void onLoad() {
         PacketEvents.getAPI().getEventManager().registerListener(
-                new NetworkProcessor(getPluginCore()), PacketListenerPriority.HIGHEST);
+                new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
     }
 
     @Override
     public void onEnable() {
 
-        this.pluginCore.onEnable(Bukkit.getOnlineMode(), "server.properties");
+        this.corePlugin.onEnable(this.getLogger(), Bukkit.getOnlineMode(), "server.properties", PlatformUtils.loadProperties(this.getClass()));
 
     }
 
     @Override
     public void onDisable() {
 
-        // Plugin shutdown logic
+        this.corePlugin.onDisable();
 
     }
 
-    public PluginCore getPluginCore() {
-        return this.pluginCore;
+    public CorePlugin getCorePlugin() {
+        return this.corePlugin;
     }
+
 }
