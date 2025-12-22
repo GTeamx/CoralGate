@@ -82,7 +82,7 @@ public class APIManager {
     private boolean parseBlockedResponse(final Response response) {
 
         try {
-            return JsonIterator.deserialize(response.getResponseBody()).get("blocked").toBoolean();
+            return JsonIterator.deserialize(response.getResponseBody()).get("blocked_status").toBoolean();
         } catch (final Exception e) {
             CorePlugin.getLogger().warning("Couldn't parse 'blocked' status from CoralGate's API. Did the API change? See error: " + e.getMessage());
             return false;
