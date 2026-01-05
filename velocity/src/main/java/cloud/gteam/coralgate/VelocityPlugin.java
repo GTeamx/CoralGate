@@ -18,18 +18,43 @@
 
 package cloud.gteam.coralgate;
 
+import cloud.gteam.coralgate.commands.CoralGateCommand;
+import cloud.gteam.coralgate.commands.VelocityPermissionChecker;
+import cloud.gteam.coralgate.commands.permissions.PermissionFactory;
 import cloud.gteam.coralgate.processor.NetworkProcessor;
 import cloud.gteam.coralgate.utils.ConfigUtils;
 import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
+import com.google.inject.Inject;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
+import com.velocitypowered.api.plugin.annotation.DataDirectory;
+import com.velocitypowered.api.proxy.ProxyServer;
+import revxrsal.commands.Lamp;
+import revxrsal.commands.velocity.VelocityLamp;
+import revxrsal.commands.velocity.actor.VelocityCommandActor;
 
+import java.nio.file.Path;
 import java.util.logging.Logger;
 
 public final class VelocityPlugin {
+
+    private final Path dataDirectory;
+
+    @Inject
+    public VelocityPlugin(final ProxyServer server, final @DataDirectory Path dataDirectory) {
+
+        this.dataDirectory = dataDirectory;
+
+        // Load commands.
+        final Lamp<VelocityCommandActor> lamp = VelocityLamp.builder(this, server)
+                .permissionFactory(new PermissionFactory(new VelocityPermissionChecker()))
+                .build();
+        lamp.register(new CoralGateCommand(this.corePlugin));
+
+    }
 
     private final CorePlugin corePlugin = new CorePlugin();
 
@@ -40,7 +65,8 @@ public final class VelocityPlugin {
         PacketEvents.getAPI().getEventManager().registerListener(
                 new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
 
-        this.corePlugin.onEnable(Logger.getLogger("CoralGate"), ConfigUtils.isOnlineMode("velocity.toml"), "velocity.toml", PlatformUtils.loadProperties(this.getClass()));
+        // Load core.
+        this.corePlugin.onEnable(Logger.getLogger("CoralGate"), this.dataDirectory.toFile(), ConfigUtils.isOnlineMode("velocity.toml"), "velocity.toml", PlatformUtils.loadProperties(this.getClass()));
 
     }
 

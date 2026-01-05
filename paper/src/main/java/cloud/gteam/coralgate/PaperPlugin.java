@@ -18,12 +18,18 @@
 
 package cloud.gteam.coralgate;
 
+import cloud.gteam.coralgate.commands.CoralGateCommand;
+import cloud.gteam.coralgate.commands.PaperPermissionChecker;
+import cloud.gteam.coralgate.commands.permissions.PermissionFactory;
 import cloud.gteam.coralgate.processor.NetworkProcessor;
 import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
+import revxrsal.commands.Lamp;
+import revxrsal.commands.bukkit.BukkitLamp;
+import revxrsal.commands.bukkit.actor.BukkitCommandActor;
 
 public final class PaperPlugin extends JavaPlugin {
 
@@ -38,7 +44,14 @@ public final class PaperPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
 
-        this.corePlugin.onEnable(this.getLogger(), Bukkit.getOnlineMode(), "server.properties", PlatformUtils.loadProperties(this.getClass()));
+        // Load core.
+        this.corePlugin.onEnable(this.getLogger(), getDataFolder(), Bukkit.getOnlineMode(), "server.properties", PlatformUtils.loadProperties(this.getClass()));
+
+        // Load commands.
+        final Lamp<BukkitCommandActor> bukkitCommandActor = BukkitLamp.builder(this)
+                .permissionFactory(new PermissionFactory(new PaperPermissionChecker()))
+                .build();
+        bukkitCommandActor.register(new CoralGateCommand(this.corePlugin));
 
     }
 
