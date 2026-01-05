@@ -6,7 +6,7 @@
     <parent>
         <groupId>cloud.gteam</groupId>
         <artifactId>CoralGate</artifactId>
-        <version>0.2.1</version>
+        <version>0.3</version>
     </parent>
 
     <groupId>cloud.gteam.coralgate</groupId>
@@ -29,15 +29,20 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.github.revxrsal</groupId>
+            <artifactId>lamp.common</artifactId>
+            <version>${lamp.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.github.retrooper</groupId>
             <artifactId>packetevents-api</artifactId>
-            <version>2.11.1</version>
+            <version>${packetevents.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.jsoniter</groupId>
-            <artifactId>jsoniter</artifactId>
-            <version>0.9.23</version>
+            <groupId>blue.endless</groupId>
+            <artifactId>jankson</artifactId>
+            <version>1.2.3</version>
         </dependency>
         <dependency>
             <groupId>org.asynchttpclient</groupId>
@@ -48,6 +53,18 @@
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
             <version>24.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>net.kyori</groupId>
+            <artifactId>adventure-api</artifactId>
+            <version>4.25.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.13.2</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 

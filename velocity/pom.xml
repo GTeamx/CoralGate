@@ -7,7 +7,7 @@
     <parent>
         <groupId>cloud.gteam</groupId>
         <artifactId>CoralGate</artifactId>
-        <version>0.2.1</version>
+        <version>0.3</version>
     </parent>
 
     <artifactId>CoralGate-Velocity</artifactId>
@@ -69,9 +69,19 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.github.revxrsal</groupId>
+            <artifactId>lamp.common</artifactId>
+            <version>${lamp.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.revxrsal</groupId>
+            <artifactId>lamp.velocity</artifactId>
+            <version>${lamp.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.github.retrooper</groupId>
             <artifactId>packetevents-spigot</artifactId>
-            <version>2.11.1</version>
+            <version>${packetevents.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
