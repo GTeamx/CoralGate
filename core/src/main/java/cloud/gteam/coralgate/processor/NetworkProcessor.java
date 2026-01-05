@@ -19,7 +19,6 @@
 package cloud.gteam.coralgate.processor;
 
 import cloud.gteam.coralgate.CorePlugin;
-import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListener;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
@@ -31,7 +30,7 @@ import com.github.retrooper.packetevents.wrapper.login.client.WrapperLoginClient
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 
 public class NetworkProcessor implements PacketListener {
 
@@ -47,7 +46,7 @@ public class NetworkProcessor implements PacketListener {
     public void onPacketReceive(final PacketReceiveEvent packetReceiveEvent) {
 
         final InetSocketAddress inetSocketAddress = packetReceiveEvent.getSocketAddress();
-        final String socketIp = inetSocketAddress.getHostString();
+        final String ipAddress = inetSocketAddress.getHostString();
 
         final PacketTypeCommon packetTypeCommon = packetReceiveEvent.getPacketType();
 
@@ -61,7 +60,7 @@ public class NetworkProcessor implements PacketListener {
             CorePlugin.getLogger().severe("Invalid port used by client. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + "]");
 
             // Report IP to CoralGate API.
-            this.corePlugin.getApiManager().reportIp(socketIp);
+            this.corePlugin.getApiManager().reportIp(ipAddress);
 
             // Cancel the packet and close the connection.
             packetReceiveEvent.getUser().closeConnection();
@@ -89,7 +88,7 @@ public class NetworkProcessor implements PacketListener {
                 }
 
                 // Report IP to CoralGate API.
-                this.corePlugin.getApiManager().reportIp(socketIp);
+                this.corePlugin.getApiManager().reportIp(ipAddress);
 
             }
 
@@ -127,7 +126,7 @@ public class NetworkProcessor implements PacketListener {
             // Client login.
             if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.LOGIN && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.LOGIN) {
 
-                //CorePlugin.getLogger().info("Version " + wrapperHandshakingClientHandshake.getClientVersion() + " for " + socketIp); TODO: remove debug
+                //CorePlugin.getLogger().info("Version " + wrapperHandshakingClientHandshake.getClientVersion() + " for " + ipAddress); TODO: remove debug
 
                 // First connection step.
                 this.connectionState.put(inetSocketAddress, packetTypeCommon);
@@ -152,7 +151,7 @@ public class NetworkProcessor implements PacketListener {
                     CorePlugin.getLogger().severe("Bot looking name detected. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
 
                     // Report IP to CoralGate API.
-                    this.corePlugin.getApiManager().reportIp(socketIp);
+                    this.corePlugin.getApiManager().reportIp(ipAddress);
 
                     // Cancel the packet and close the connection.
                     packetReceiveEvent.getUser().closeConnection();
@@ -165,7 +164,7 @@ public class NetworkProcessor implements PacketListener {
                     // Check if the IP is blocked by CoralGate's API.
                     try {
 
-                        if (this.corePlugin.getApiManager().isIpBlocked(socketIp).get()) {
+                        if (this.corePlugin.getApiManager().isIpBlocked(ipAddress).get()) {
 
                             // Log blocked ip.
                             CorePlugin.getLogger().severe("IP is blocked by CoralGate's API. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
@@ -191,7 +190,7 @@ public class NetworkProcessor implements PacketListener {
                 CorePlugin.getLogger().severe("Missing handshake procedure. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
 
                 // Report IP to CoralGate API.
-                this.corePlugin.getApiManager().reportIp(socketIp);
+                this.corePlugin.getApiManager().reportIp(ipAddress);
 
                 // Cancel the packet and close the connection.
                 packetReceiveEvent.getUser().closeConnection();
@@ -223,7 +222,7 @@ public class NetworkProcessor implements PacketListener {
                 CorePlugin.getLogger().severe("Missing login start procedure. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
 
                 // Report IP to CoralGate API.
-                this.corePlugin.getApiManager().reportIp(socketIp);
+                this.corePlugin.getApiManager().reportIp(ipAddress);
 
                 // Cancel the packet and close the connection.
                 packetReceiveEvent.getUser().closeConnection();
@@ -251,7 +250,7 @@ public class NetworkProcessor implements PacketListener {
                 CorePlugin.getLogger().severe("Missing login success procedure. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
 
                 // Report IP to CoralGate API.
-                this.corePlugin.getApiManager().reportIp(socketIp);
+                this.corePlugin.getApiManager().reportIp(ipAddress);
 
                 // Cancel the packet and close the connection.
                 packetReceiveEvent.getUser().closeConnection();
@@ -275,7 +274,7 @@ public class NetworkProcessor implements PacketListener {
             CorePlugin.getLogger().severe("Missing full connection procedure. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
 
             // Report IP to CoralGate API.
-            this.corePlugin.getApiManager().reportIp(socketIp);
+            this.corePlugin.getApiManager().reportIp(ipAddress);
 
             // Cancel the packet and close the connection.
             packetReceiveEvent.getUser().closeConnection();
@@ -291,7 +290,7 @@ public class NetworkProcessor implements PacketListener {
     public void onPacketSend(final PacketSendEvent packetSendEvent) {
 
         final InetSocketAddress inetSocketAddress = packetSendEvent.getSocketAddress();
-        final String socketIp = inetSocketAddress.getHostString();
+        final String ipAddress = inetSocketAddress.getHostString();
 
         final PacketTypeCommon packetTypeCommon = packetSendEvent.getPacketType();
 
@@ -311,7 +310,7 @@ public class NetworkProcessor implements PacketListener {
                 CorePlugin.getLogger().severe("Missing login start procedure. Closing connection from " + inetSocketAddress + ". [S->C | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
 
                 // Report IP to CoralGate API.
-                this.corePlugin.getApiManager().reportIp(socketIp);
+                this.corePlugin.getApiManager().reportIp(ipAddress);
 
                 // Cancel the packet and close the connection.
                 packetSendEvent.getUser().closeConnection();
@@ -337,7 +336,7 @@ public class NetworkProcessor implements PacketListener {
                 CorePlugin.getLogger().severe("Missing encryption response or login start procedure. Closing connection from " + inetSocketAddress + ". [S->C | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
 
                 // Report IP to CoralGate API.
-                this.corePlugin.getApiManager().reportIp(socketIp);
+                this.corePlugin.getApiManager().reportIp(ipAddress);
 
                 // Cancel the packet and close the connection.
                 packetSendEvent.getUser().closeConnection();
@@ -367,7 +366,7 @@ public class NetworkProcessor implements PacketListener {
                 CorePlugin.getLogger().severe("Missing set compression procedure. Closing connection from " + inetSocketAddress + ". [S->C | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
 
                 // Report IP to CoralGate API.
-                this.corePlugin.getApiManager().reportIp(socketIp);
+                this.corePlugin.getApiManager().reportIp(ipAddress);
 
                 // Cancel the packet and close the connection.
                 packetSendEvent.getUser().closeConnection();
@@ -384,19 +383,23 @@ public class NetworkProcessor implements PacketListener {
         // Whitelisted packets that should not be blocked, even if procedure is not complete.
         if (packetTypeCommon == PacketType.Status.Server.RESPONSE || packetTypeCommon == PacketType.Status.Server.PONG) {
 
-            // Send packet later if the IP is not blocked.
-            packetSendEvent.setCancelled(true);
+            // Check if IP is not blocked and not in cache. This blocks first ping.
+            if (!this.corePlugin.getApiManager().isIpBlockedCache(ipAddress)) packetSendEvent.setCancelled(true);
 
             // Don't send back the packet if the IP is blocked by CoralGate's API.
-            this.corePlugin.getApiManager().isIpBlocked(socketIp).thenAccept(blocked -> {
+            this.corePlugin.getApiManager().isIpBlocked(ipAddress).thenAccept(blocked -> {
 
-                if (!blocked) {
+                if (blocked) {
 
-                    packetSendEvent.setCancelled(false);
-                    PacketEvents.getAPI().getProtocolManager().getUsers().stream().filter(filteredUser -> filteredUser.getAddress() == inetSocketAddress).forEach(user -> user.sendPacketSilently(packetSendEvent));
+                    // Log blocked ip.
+                    CorePlugin.getLogger().severe("IP is blocked by CoralGate's API. Closing connection from " + inetSocketAddress + ". [S->C | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
 
-                // Log blocked ip.
-                } else CorePlugin.getLogger().severe("IP is blocked by CoralGate's API. Closing connection from " + inetSocketAddress + ". [S->C | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
+                    // Cancel the packet and close the connection.
+                    packetSendEvent.getUser().closeConnection();
+                    packetSendEvent.setCancelled(true);
+                    return;
+
+                }
 
             });
 
