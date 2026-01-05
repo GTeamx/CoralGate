@@ -19,8 +19,12 @@
 package cloud.gteam.coralgate;
 
 import cloud.gteam.coralgate.api.APIManager;
+import cloud.gteam.coralgate.config.ConfigManager;
+import cloud.gteam.coralgate.config.ConfigModel;
 import cloud.gteam.coralgate.utils.ConfigUtils;
 
+import java.io.File;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -33,11 +37,12 @@ public final class CorePlugin {
 
     private String platformName;
     private String platformVersion;
-    private String apiVersion;
+    private String coreVersion;
 
+    private ConfigManager configManager;
     private APIManager apiManager;
 
-    public void onEnable(final Logger logger, final boolean onlineMode, final String configFileName, final Properties platformProperties) {
+    public void onEnable(final Logger logger, final File dataFolder, final boolean onlineMode, final String configFileName, final Properties platformProperties) {
 
         CorePlugin.logger = logger;
 
@@ -45,13 +50,24 @@ public final class CorePlugin {
 
         this.platformName = platformProperties.getProperty("platform-name");
         this.platformVersion = platformProperties.getProperty("platform-version");
-        this.apiVersion = platformProperties.getProperty("api-version");
+        this.coreVersion = platformProperties.getProperty("core-version");
 
-        logger.info("Loading platform '" + this.platformName + "' version '" + this.platformVersion + "', implemented against core version '" + platformProperties.getProperty("core-version") + "'...");
+        logger.info("Loading platform '" + this.platformName + "' version '" + this.platformVersion + "', implemented against core version '" + this.coreVersion + "'...");
 
-        this.apiManager = new APIManager(this, this.apiVersion);
+        this.configManager = new ConfigManager(dataFolder, "config.json");
+        this.configManager.load();
 
-        logger.info("Using API version '" + this.apiVersion + "'.");
+        // Get latest config file version.
+        final String latestConfigVersion = new ConfigModel().getConfigVersion();
+
+        // Compare to internal configuration version to see if it's outdated.
+        if (!Objects.equals(latestConfigVersion, this.configManager.getConfig().getConfigVersion())) logger.warning("Please consider upgrading your configuration file to the latest version: '" + latestConfigVersion + "'.");
+
+        logger.info("Using configuration file version '" + this.configManager.getConfig().getConfigVersion() + "'.");
+
+        this.apiManager = new APIManager(this);
+
+        logger.info("Loading API version '" + this.getConfigManager().getConfig().getApiVersion() + "', implemented against host '" + this.getConfigManager().getConfig().getApiHost() + "'.");
 
         this.onlineMode = onlineMode;
 
@@ -85,6 +101,14 @@ public final class CorePlugin {
 
     public String getPlatformVersion() {
         return this.platformVersion;
+    }
+
+    public String getCoreVersion() {
+        return this.coreVersion;
+    }
+
+    public ConfigManager getConfigManager() {
+        return this.configManager;
     }
 
     public APIManager getApiManager() {
