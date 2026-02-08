@@ -1,3 +1,8 @@
+[//]: # (Main image, centered)
+<p align="center">
+  <img width="300" src="https://github.com/GTeamx/CoralGate/blob/prod/assets/coralgate_logo.png?raw=true">
+</p>
+
 [//]: # (Main title, centered)
 <h1 align="center">CoralGate</h1>
 
