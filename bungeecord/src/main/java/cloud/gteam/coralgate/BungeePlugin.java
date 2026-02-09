@@ -26,6 +26,7 @@ import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
 import net.md_5.bungee.api.plugin.Plugin;
+import org.bstats.bungeecord.Metrics;
 import revxrsal.commands.Lamp;
 import revxrsal.commands.bungee.BungeeLamp;
 import revxrsal.commands.bungee.actor.BungeeCommandActor;
@@ -42,6 +43,9 @@ public final class BungeePlugin extends Plugin {
 
     @Override
     public void onEnable() {
+
+        // Start bStats.
+        new Metrics(this, 29439);
 
         // Load core.
         this.corePlugin.onEnable(this.getLogger(), getDataFolder(), this.getProxy().getConfig().isOnlineMode(), "config.yml", PlatformUtils.loadProperties(this.getClass()));
