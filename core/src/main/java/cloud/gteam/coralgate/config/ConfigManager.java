@@ -1,6 +1,6 @@
 /*
  * This file is part of CoralGate - https://github.com/GTeamX/CoralGate
- * Copyright (C) 2025 GTeamX (GTeam) and it's contributors
+ * Copyright (C) 2026 GTeamX (GTeam) and it's contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,35 +18,41 @@
 
 package cloud.gteam.coralgate.config;
 
-import blue.endless.jankson.Jankson;
-import blue.endless.jankson.JsonObject;
 import cloud.gteam.coralgate.CorePlugin;
+import org.spongepowered.configurate.CommentedConfigurationNode;
+import org.spongepowered.configurate.hocon.HoconConfigurationLoader;
+import org.spongepowered.configurate.objectmapping.ObjectMapper;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 
 public class ConfigManager {
 
     private final File dataFolder;
     private final File configFile;
     private ConfigModel config;
-    private final Jankson jankson;
+    private final HoconConfigurationLoader hoconConfigurationLoader;
 
     public ConfigManager(final File dataFolder, final String configFileName) {
         this.dataFolder = dataFolder;
         this.configFile = new File(dataFolder, configFileName);
-        this.jankson = Jankson.builder().build();
+        this.hoconConfigurationLoader = HoconConfigurationLoader .builder()
+                .path(this.configFile.toPath())
+                .indent(2)
+                .defaultOptions(options -> options
+                        .shouldCopyDefaults(true)
+                        .header("CoralGate - https://github.com/GTeamX/CoralGate\nCopyright (C) 2026 GTeamX.\nConfiguration file.")
+                        .serializers(s -> s.registerAnnotatedObjects(ObjectMapper.factory()))
+                )
+                .build();
     }
 
-    // Load config file, create a new one if it doesn't exist.
     public void load() {
 
+        // Load config file, create a new one if it doesn't exist.
         if (!this.configFile.exists()) {
 
-            CorePlugin.getLogger().info("Couldn't find config.json file. Generating default config...");
+            CorePlugin.getLogger().info("Couldn't find config.yml file. Generating default config...");
 
-            // Generate new config and save it.
             this.config = new ConfigModel();
             save();
 
@@ -56,14 +62,19 @@ public class ConfigManager {
 
         try {
 
-            // Read config file.
-            final JsonObject jsonObject = this.jankson.load(configFile);
-            this.config = this.jankson.fromJson(jsonObject, ConfigModel.class);
-            CorePlugin.getLogger().info("Successfully loaded config.json!");
+            // Read config file into a node.
+            final CommentedConfigurationNode node = this.hoconConfigurationLoader.load();
+
+            // Map the node to POJO.
+            this.config = node.get(ConfigModel.class);
+
+            if (this.config == null) this.config = new ConfigModel();
+
+            CorePlugin.getLogger().info("Successfully loaded config.yml!");
 
         } catch (final Exception e) {
 
-            CorePlugin.getLogger().severe("Couldn't load config.json. Did the file get corrupted? See error: " + e.getMessage());
+            CorePlugin.getLogger().severe("Couldn't load config.yml. Did the file get corrupted? See error: " + e.getMessage());
 
             // Fallback to avoid NullPointerException.
             this.config = new ConfigModel();
@@ -81,20 +92,15 @@ public class ConfigManager {
                 if (!this.configFile.getParentFile().mkdirs()) CorePlugin.getLogger().severe("Couldn't create data folders. Is the directory read-only? No error to display.");
             }
 
-            final String json = this.jankson.toJson(this.config).toJson(true, true);
+            // Map the POJO back to a node.
+            final CommentedConfigurationNode node = this.hoconConfigurationLoader.createNode(this.hoconConfigurationLoader.defaultOptions());
+            node.set(ConfigModel.class, this.config);
 
-            // Append header.
-            final String header = "//" + "\n" +
-                    "// CoralGate - https://github.com/GTeamX/CoralGate" + "\n" +
-                    "// Copyright (C) 2025 GTeamX." + "\n" +
-                    "// Configuration file." + "\n" +
-                    "//" + "\n" + "\n";
-
-            // Write file and data.
-            Files.write(this.configFile.toPath(), (header + json).getBytes(StandardCharsets.UTF_8));
+            // Write node to file.
+            this.hoconConfigurationLoader.save(node);
 
         } catch (final Exception e) {
-            CorePlugin.getLogger().severe("Couldn't write data to config.json. Is the directory read-only? See error: " + e.getMessage());
+            CorePlugin.getLogger().severe("Couldn't write data to config.yml. Is the directory read-only? See error: " + e.getMessage());
         }
 
     }
