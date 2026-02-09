@@ -25,6 +25,7 @@ import cloud.gteam.coralgate.processor.NetworkProcessor;
 import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import revxrsal.commands.Lamp;
@@ -43,6 +44,9 @@ public final class PaperPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+
+        // Start bStats.
+        new Metrics(this, 29439);
 
         // Load core.
         this.corePlugin.onEnable(this.getLogger(), getDataFolder(), Bukkit.getOnlineMode(), "server.properties", PlatformUtils.loadProperties(this.getClass()));
