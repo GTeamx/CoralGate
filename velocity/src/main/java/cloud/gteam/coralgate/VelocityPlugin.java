@@ -32,6 +32,7 @@ import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
+import org.bstats.velocity.Metrics;
 import revxrsal.commands.Lamp;
 import revxrsal.commands.velocity.VelocityLamp;
 import revxrsal.commands.velocity.actor.VelocityCommandActor;
@@ -41,10 +42,12 @@ import java.util.logging.Logger;
 
 public final class VelocityPlugin {
 
+    private final Metrics.Factory metricsFactory;
+
     private final Path dataDirectory;
 
     @Inject
-    public VelocityPlugin(final ProxyServer server, final @DataDirectory Path dataDirectory) {
+    public VelocityPlugin(final ProxyServer server, final @DataDirectory Path dataDirectory, final Metrics.Factory metricsFactory) {
 
         this.dataDirectory = dataDirectory;
 
@@ -54,12 +57,18 @@ public final class VelocityPlugin {
                 .build();
         lamp.register(new CoralGateCommand(this.corePlugin));
 
+        // Load bStats metrics factory.
+        this.metricsFactory = metricsFactory;
+
     }
 
     private final CorePlugin corePlugin = new CorePlugin();
 
     @Subscribe
     public void onProxyInitialization(final ProxyInitializeEvent proxyInitializeEvent) {
+
+        // Start bStats.
+        this.metricsFactory.make(this, 29439);
 
         // onLoad equivalent.
         PacketEvents.getAPI().getEventManager().registerListener(
