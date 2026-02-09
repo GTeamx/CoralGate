@@ -1,6 +1,6 @@
 /*
  * This file is part of CoralGate - https://github.com/GTeamX/CoralGate
- * Copyright (C) 2025 GTeamX (GTeam) and it's contributors
+ * Copyright (C) 2026 GTeamX (GTeam) and it's contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,9 @@ package cloud.gteam.coralgate;
 import cloud.gteam.coralgate.api.APIManager;
 import cloud.gteam.coralgate.config.ConfigManager;
 import cloud.gteam.coralgate.config.ConfigModel;
+import cloud.gteam.coralgate.update.UpdateChecker;
 import cloud.gteam.coralgate.utils.ConfigUtils;
+import com.github.retrooper.packetevents.PacketEvents;
 
 import java.io.File;
 import java.util.Objects;
@@ -35,12 +37,11 @@ public final class CorePlugin {
     private boolean onlineMode;
     private int compressionThreshold;
 
-    private String platformName;
-    private String platformVersion;
-    private String coreVersion;
+    private Properties platformProperties;
 
     private ConfigManager configManager;
     private APIManager apiManager;
+    private UpdateChecker updateChecker;
 
     public void onEnable(final Logger logger, final File dataFolder, final boolean onlineMode, final String configFileName, final Properties platformProperties) {
 
@@ -48,13 +49,19 @@ public final class CorePlugin {
 
         logger.info("Startup sequence of CoralGate...");
 
-        this.platformName = platformProperties.getProperty("platform-name");
-        this.platformVersion = platformProperties.getProperty("platform-version");
-        this.coreVersion = platformProperties.getProperty("core-version");
+        this.platformProperties = platformProperties;
 
-        logger.info("Loading platform '" + this.platformName + "' version '" + this.platformVersion + "', implemented against core version '" + this.coreVersion + "'...");
+        logger.info("Loading platform '" + platformProperties.getProperty("platform-name") + "' version '" + platformProperties.getProperty("platform-version") + "', implemented against core version '" + platformProperties.getProperty("core-version") + "'...");
 
-        this.configManager = new ConfigManager(dataFolder, "config.json");
+        final String peCoreVersion = platformProperties.getProperty("packetevents-version");
+        final String peServerVersion = PacketEvents.getAPI().getVersion().toString();
+
+        // packetevents versions do not match.
+        if (!peCoreVersion.equals(peServerVersion)) {
+            logger.warning("packetevents version mismatch! You are using version '" + peServerVersion + "' but core module uses '" + peCoreVersion + "'! You may experience issues or bugs. Update CoralGate and packetevents to fix this issue.");
+        } else logger.info("Using packetevents version '" + peCoreVersion + "'...");
+
+        this.configManager = new ConfigManager(dataFolder, "config.yml");
         this.configManager.load();
 
         // Get latest config file version.
@@ -67,11 +74,43 @@ public final class CorePlugin {
 
         this.apiManager = new APIManager(this);
 
-        logger.info("Loading API version '" + this.getConfigManager().getConfig().getApiVersion() + "', implemented against host '" + this.getConfigManager().getConfig().getApiHost() + "'.");
+        logger.info("Loading API version '" + this.getConfigManager().getConfig().getApiVersion() + "', implemented against host '" + this.getConfigManager().getConfig().getApiHost() + "'...");
+
+        if (this.configManager.getConfig().isApiHealthCheck()) {
+
+            this.apiManager.checkHealth().thenAccept(isHealthy -> {
+
+                if (isHealthy) {
+                    CorePlugin.getLogger().info("API connection is healthy!");
+                } else {
+                    CorePlugin.getLogger().warning("API returned unhealthy status. Is it down ? No error to display.");
+                }
+
+            });
+
+        } else logger.info("API health check skipped.");
 
         this.onlineMode = onlineMode;
 
         this.compressionThreshold = ConfigUtils.getCompressionThreshold(configFileName);
+
+        logger.info("Loading update checker...");
+
+        this.updateChecker = new UpdateChecker(this);
+
+        this.updateChecker.isUpToDate().thenAccept(upToDate -> {
+
+            try {
+                Thread.sleep(3000);
+            } catch (final InterruptedException ignored) {}
+
+            if (upToDate) {
+                CorePlugin.getLogger().info("CoralGate is up to date!");
+            } else {
+                CorePlugin.getLogger().warning("You are behind updates on CoralGate! Latest version is '" + this.updateChecker.getLatestVersion() + "'. You are on '" + (this.platformProperties.getProperty("core-version") + "_" + this.platformProperties.getProperty("platform-version")) + "'.");
+            }
+
+        });
 
         logger.info("CoralGate is ready to use!");
 
@@ -80,6 +119,7 @@ public final class CorePlugin {
     public void onDisable() {
 
         if (this.apiManager != null) this.apiManager.shutdown();
+        if (this.updateChecker != null) this.updateChecker.shutdown();
 
     }
 
@@ -95,16 +135,8 @@ public final class CorePlugin {
         return this.compressionThreshold;
     }
 
-    public String getPlatformName() {
-        return this.platformName;
-    }
-
-    public String getPlatformVersion() {
-        return this.platformVersion;
-    }
-
-    public String getCoreVersion() {
-        return this.coreVersion;
+    public Properties getPlatformProperties() {
+        return this.platformProperties;
     }
 
     public ConfigManager getConfigManager() {
@@ -113,6 +145,10 @@ public final class CorePlugin {
 
     public APIManager getApiManager() {
         return this.apiManager;
+    }
+
+    public UpdateChecker getUpdateChecker() {
+        return this.updateChecker;
     }
 
 }
