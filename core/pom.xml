@@ -6,7 +6,7 @@
     <parent>
         <groupId>cloud.gteam</groupId>
         <artifactId>CoralGate</artifactId>
-        <version>0.3</version>
+        <version>0.3.0-beta</version>
     </parent>
 
     <groupId>cloud.gteam.coralgate</groupId>
@@ -20,7 +20,7 @@
     </properties>
 
     <repositories>
-        <!-- PacketEvents repo !-->
+        <!-- packetevents repo !-->
         <repository>
             <id>codemc-releases</id>
             <url>https://repo.codemc.io/repository/maven-releases/</url>
@@ -45,20 +45,19 @@
             <version>1.2.3</version>
         </dependency>
         <dependency>
+            <groupId>org.spongepowered</groupId>
+            <artifactId>configurate-hocon</artifactId>
+            <version>4.2.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.asynchttpclient</groupId>
             <artifactId>async-http-client</artifactId>
-            <version>3.0.1</version>
+            <version>3.0.6</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
-            <version>24.0.1</version>
-        </dependency>
-        <dependency>
-            <groupId>net.kyori</groupId>
-            <artifactId>adventure-api</artifactId>
-            <version>4.25.0</version>
-            <scope>compile</scope>
+            <version>26.0.2-1</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
