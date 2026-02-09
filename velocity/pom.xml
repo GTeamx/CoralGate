@@ -7,10 +7,10 @@
     <parent>
         <groupId>cloud.gteam</groupId>
         <artifactId>CoralGate</artifactId>
-        <version>0.3</version>
+        <version>0.3.0-beta</version>
     </parent>
 
-    <artifactId>CoralGate-Velocity</artifactId>
+    <artifactId>CoralGate-${core.version}-Velocity</artifactId>
     <packaging>jar</packaging>
 
     <name>velocity</name>
@@ -44,6 +44,24 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <relocations>
+                        <relocation>
+                            <pattern>org.bstats</pattern>
+                            <shadedPattern>coralgate.libs.org.bstats</shadedPattern>
+                        </relocation>
+                    </relocations>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
             </plugin>
         </plugins>
         <resources>
@@ -55,7 +73,7 @@
     </build>
 
     <repositories>
-        <!-- PacketEvents repo !-->
+        <!-- packetevents repo !-->
         <repository>
             <id>codemc-releases</id>
             <url>https://repo.codemc.io/repository/maven-releases/</url>
@@ -68,6 +86,12 @@
     </repositories>
 
     <dependencies>
+        <dependency>
+            <groupId>org.bstats</groupId>
+            <artifactId>bstats-velocity</artifactId>
+            <version>${bstats.version}</version>
+            <scope>compile</scope>
+        </dependency>
         <dependency>
             <groupId>io.github.revxrsal</groupId>
             <artifactId>lamp.common</artifactId>
