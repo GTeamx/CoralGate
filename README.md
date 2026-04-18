@@ -29,7 +29,7 @@
 
 CoralGate is a simple plugin to prevent server scanners from reaching your server.
 
-If you wish to get support, test or have any questions about CoralGate, make sure to join our [Discord server](https://discord.gg/rxV89DZHEd)!
+If you wish to get support, test or have any questions about CoralGate, make sure to join our [Discord server](https://discord.gteam.cloud)!
 
 ## ✅ Supported platforms/versions
 
@@ -99,7 +99,7 @@ The API supports both IPv4 and IPv6 and has currently **2** major versions:
 
 ## 🚷 API false positives
 
-If your API, ISP, domain name or holders get blocked by our API and therefore from the CoralGate powered servers, contact us on Discord via our ticket system.<br>
+If your API, ISP, domain name or holders get blocked by our API and therefore from the CoralGate powered servers, contact us on [Discord](https://discord.gteam.cloud) via our ticket system.<br>
 
 Provide the impacted ip address(es) and further explanation on the usage behind the ip address(es). Our support team will try their best to help you and get you unblocked from CoralGate.
 
@@ -124,7 +124,7 @@ Provide the impacted ip address(es) and further explanation on the usage behind 
 ## 🎯 Issues/Feature request
 
 Before opening an issue or feature request make sure you follow our templates.<br>
-If your issue/feature request goes unotice, you can open a ticket on our Discord server or bump it.
+If your issue/feature request goes unotice, you can open a ticket on our [Discord](https://discord.gteam.cloud) server or bump it.
 
 ## 🔃 Contributing
 
