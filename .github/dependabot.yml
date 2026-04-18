@@ -1,12 +1,25 @@
 version: 2
 updates:
-  # Maintain dependencies for Maven
+  # Maintain dependencies for Maven (dev)
   - package-ecosystem: "maven"
-    directory: "/" # Location of the parent pom.xml
+    directory: "/"
+    target-branch: "dev" # Dependabot will check the 'dev' branch
     schedule:
       interval: "daily"
     # Groups updates to reduce PR noise
     groups:
-      java-dependencies:
+      dev-deps:
+        patterns:
+          - "*"
+
+  # Maintain dependencies for Maven (prod)
+  - package-ecosystem: "maven"
+    directory: "/"
+    target-branch: "prod" # Dependabot will check the 'prod' branch
+    schedule:
+      interval: "daily"
+    # Groups updates to reduce PR noise  
+    groups:
+      prod-deps:
         patterns:
           - "*"
