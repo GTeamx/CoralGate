@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # Maintain dependencies for Maven
+  - package-ecosystem: "maven"
+    directory: "/" # Location of the parent pom.xml
+    schedule:
+      interval: "daily"
+    # Groups updates to reduce PR noise
+    groups:
+      java-dependencies:
+        patterns:
+          - "*"
