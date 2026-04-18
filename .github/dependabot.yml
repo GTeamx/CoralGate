@@ -11,15 +11,3 @@ updates:
       dev-deps:
         patterns:
           - "*"
-
-  # Maintain dependencies for Maven (prod)
-  - package-ecosystem: "maven"
-    directory: "/"
-    target-branch: "prod" # Dependabot will check the 'prod' branch
-    schedule:
-      interval: "daily"
-    # Groups updates to reduce PR noise  
-    groups:
-      prod-deps:
-        patterns:
-          - "*"
