@@ -35,10 +35,10 @@ If you wish to get support, test or have any questions about CoralGate, make sur
 
 | Platform          | Version             | Supported?  |
 | :---------------- | :------------------ | :---------: |
-| Spigot            | 1.8 - 1.21.11       | ✅         |
-| Paper             | 1.8 - 1.21.11       | ✅         |
-| BungeeCord        | 1.8 - 1.21.11       | ⚠️         |
-| Velocity          | 1.8 - 1.21.11       | ⚠️         |
+| Spigot            | 1.8 - 26.1.1        | ✅         |
+| Paper             | 1.8 - 26.1.1        | ✅         |
+| BungeeCord        | 1.8 - 26.1.1        | ⚠️         |
+| Velocity          | 1.8 - 26.1.1        | ⚠️         |
 | Sponge            | Any                 | ❌         |
 | Fabric            | Any                 | ❌         |
 | Forge             | Any                 | ❌         |
