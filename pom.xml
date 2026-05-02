@@ -26,7 +26,7 @@
         <!-- Dependencies related options !-->
         <bstats.version>3.2.1</bstats.version>
         <lamp.version>4.0.0-rc.16</lamp.version>
-        <packetevents.version>2.12.0</packetevents.version>
+        <packetevents.version>2.12.1</packetevents.version>
     </properties>
 
 </project>
