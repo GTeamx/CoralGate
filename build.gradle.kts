@@ -2,9 +2,9 @@
 extra["coreVersion"] = "0.3.0-beta"
 
 // Dependency related options
-extra["lampVersion"] = "4.0.0-rc.14"
+extra["lampVersion"] = "4.0.0-rc.16"
 extra["packetEventsVersion"] = "2.12.1"
-extra["bstatsVersion"] = "3.1.0"
+extra["bstatsVersion"] = "3.2.1"
 
 subprojects {
 
