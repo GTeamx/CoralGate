@@ -1,7 +1,7 @@
 version: 2
 updates:
-  # Maintain dependencies for Maven (dev)
-  - package-ecosystem: "maven"
+  # Maintain dependencies for Gradle (dev)
+  - package-ecosystem: "gradle"
     directory: "/"
     target-branch: "dev" # Dependabot will check the 'dev' branch
     schedule:
