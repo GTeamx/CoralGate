@@ -1,6 +1,6 @@
 plugins {
     `java-library`
-    id("com.gradleup.shadow") version "9.3.0"
+    id("com.gradleup.shadow") version "9.4.1"
 }
 
 group = "cloud.gteam.coralgate"
@@ -27,7 +27,7 @@ dependencies {
 
     compileOnly("com.github.retrooper:packetevents-api:$packetEventsVersion")
 
-    compileOnly("com.google.code.gson:gson:2.13.2")
+    compileOnly("com.google.code.gson:gson:2.14.0")
 
     implementation("blue.endless:jankson:1.2.3")
     implementation("org.asynchttpclient:async-http-client:3.0.9")
