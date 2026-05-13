@@ -30,7 +30,7 @@ dependencies {
     compileOnly("com.google.code.gson:gson:2.14.0")
 
     implementation("blue.endless:jankson:1.2.3")
-    implementation("org.asynchttpclient:async-http-client:3.0.9")
+    implementation("org.asynchttpclient:async-http-client:3.0.10")
     implementation("org.jetbrains:annotations:26.1.0")
 }
 
