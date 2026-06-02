@@ -5,6 +5,7 @@
 */target
 */dependency-reduced-pom.xml
 */.gradle
+/.gradle
 */build
 */LICENSE.TXT
 */run
