@@ -27,6 +27,8 @@ import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.packettype.PacketTypeCommon;
 import com.github.retrooper.packetevents.wrapper.handshaking.client.WrapperHandshakingClientHandshake;
 import com.github.retrooper.packetevents.wrapper.login.client.WrapperLoginClientLoginStart;
+import com.github.retrooper.packetevents.wrapper.status.client.WrapperStatusClientPing;
+import com.github.retrooper.packetevents.wrapper.status.server.WrapperStatusServerResponse;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -63,8 +65,8 @@ public class NetworkProcessor implements PacketListener {
             this.corePlugin.getApiManager().reportIp(ipAddress);
 
             // Cancel the packet and close the connection.
-            packetReceiveEvent.getUser().closeConnection();
             packetReceiveEvent.setCancelled(true);
+            packetReceiveEvent.getUser().closeConnection();
             return;
 
         // The port is ok, continue.
@@ -74,6 +76,8 @@ public class NetworkProcessor implements PacketListener {
             // Since Linux players are "rare", we'll issue a warning statement about them.
             // Alongside that, we will block any server list ping to prevent bots from getting information about the server.
             // (server version, online players, player count...).
+            //
+            // This didn't age well, I'm now a Linux player...
             if (inetSocketAddress.getPort() < 49152) {
 
                 // Log about this suspicious connection.
@@ -83,6 +87,14 @@ public class NetworkProcessor implements PacketListener {
                 if (packetTypeCommon != PacketType.Handshaking.Client.HANDSHAKE) {
 
                     packetReceiveEvent.setCancelled(true);
+
+                    // Send a generic forged response.
+                    if (packetTypeCommon == PacketType.Status.Client.REQUEST) {
+                        packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusServerResponse("{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"CraftBukkit 26.1.1\",\"protocol\":775},\"enforcesSecureChat\":true}"));
+                    } else {
+                        packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusClientPing(packetReceiveEvent));
+                    }
+
                     return;
 
                 }
@@ -115,7 +127,16 @@ public class NetworkProcessor implements PacketListener {
             } else {
 
                 // Check if IP is not blocked and not in cache. This blocks first ping.
-                if (!this.corePlugin.getApiManager().isIpBlockedCache(ipAddress) || !this.corePlugin.getApiManager().isHealthy()) packetReceiveEvent.setCancelled(true);
+                if (!this.corePlugin.getApiManager().isIpBlockedCache(ipAddress) || !this.corePlugin.getApiManager().isHealthy()) {
+
+                    // Send a generic forged response.
+                    if (packetTypeCommon == PacketType.Status.Client.REQUEST) {
+                        packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusServerResponse("{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"CraftBukkit 26.1.1\",\"protocol\":775},\"enforcesSecureChat\":true}"));
+                    } else {
+                        packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusClientPing(packetReceiveEvent));
+                    }
+
+                }
 
                 // Block processing if the API is unhealthy (down).
                 if (!this.corePlugin.getApiManager().isHealthy()) return;
@@ -153,8 +174,6 @@ public class NetworkProcessor implements PacketListener {
             // Client login.
             if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.LOGIN && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.LOGIN) {
 
-                //CorePlugin.getLogger().info("Version " + wrapperHandshakingClientHandshake.getClientVersion() + " for " + ipAddress); TODO: remove debug
-
                 // First connection step.
                 this.connectionState.put(inetSocketAddress, packetTypeCommon);
 
@@ -172,7 +191,7 @@ public class NetworkProcessor implements PacketListener {
                 final WrapperLoginClientLoginStart wrapperLoginClientLoginStartMappings = new WrapperLoginClientLoginStart(packetReceiveEvent);
 
                 // Check for obvious Bot names, most of the time "Player".
-                if (wrapperLoginClientLoginStartMappings.getUsername().equalsIgnoreCase("Player")) {
+                if (wrapperLoginClientLoginStartMappings.getUsername().startsWith("Player")) {
 
                     // Log bot looking name.
                     CorePlugin.getLogger().severe("Bot looking name detected. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
@@ -181,8 +200,8 @@ public class NetworkProcessor implements PacketListener {
                     this.corePlugin.getApiManager().reportIp(ipAddress);
 
                     // Cancel the packet and close the connection.
-                    packetReceiveEvent.getUser().closeConnection();
                     packetReceiveEvent.setCancelled(true);
+                    packetReceiveEvent.getUser().closeConnection();
                     return;
 
                 // If the handshake and login procedure are good while not having a bot looking name, continue.
@@ -196,8 +215,9 @@ public class NetworkProcessor implements PacketListener {
                             // Log blocked ip.
                             CorePlugin.getLogger().severe("IP is blocked by the API. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
 
-                            packetReceiveEvent.getUser().closeConnection();
+                            // Cancel the packet and close the connection.
                             packetReceiveEvent.setCancelled(true);
+                            packetReceiveEvent.getUser().closeConnection();
                             return;
 
                         }
@@ -220,8 +240,8 @@ public class NetworkProcessor implements PacketListener {
                 this.corePlugin.getApiManager().reportIp(ipAddress);
 
                 // Cancel the packet and close the connection.
-                packetReceiveEvent.getUser().closeConnection();
                 packetReceiveEvent.setCancelled(true);
+                packetReceiveEvent.getUser().closeConnection();
                 return;
 
             }
@@ -252,8 +272,8 @@ public class NetworkProcessor implements PacketListener {
                 this.corePlugin.getApiManager().reportIp(ipAddress);
 
                 // Cancel the packet and close the connection.
-                packetReceiveEvent.getUser().closeConnection();
                 packetReceiveEvent.setCancelled(true);
+                packetReceiveEvent.getUser().closeConnection();
                 return;
 
             }
@@ -280,8 +300,8 @@ public class NetworkProcessor implements PacketListener {
                 this.corePlugin.getApiManager().reportIp(ipAddress);
 
                 // Cancel the packet and close the connection.
-                packetReceiveEvent.getUser().closeConnection();
                 packetReceiveEvent.setCancelled(true);
+                packetReceiveEvent.getUser().closeConnection();
                 return;
 
             }
@@ -304,12 +324,13 @@ public class NetworkProcessor implements PacketListener {
             this.corePlugin.getApiManager().reportIp(ipAddress);
 
             // Cancel the packet and close the connection.
-            packetReceiveEvent.getUser().closeConnection();
             packetReceiveEvent.setCancelled(true);
+            packetReceiveEvent.getUser().closeConnection();
 
         }
 
         // Everything is good!
+        //System.out.println("Accepted incoming packet from " + inetSocketAddress + " (" + packetTypeCommon.getName() + ")"); TODO: add "honey-pot" server option to display such message
 
     }
 
@@ -423,6 +444,7 @@ public class NetworkProcessor implements PacketListener {
         }
 
         // Everything is good!
+        //System.out.println("Accepted outgoing packet to " + inetSocketAddress + " (" + packetTypeCommon.getName() + ")"); TODO: add "honey-pot" server option to display such message
 
     }
 
