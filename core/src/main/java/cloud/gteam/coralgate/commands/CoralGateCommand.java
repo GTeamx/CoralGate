@@ -68,7 +68,7 @@ public class CoralGateCommand {
 
     // /coralgate|cg version|ver
     @Subcommand({"version", "ver"})
-    @Description("Show different versions for CoralGate.")
+    @Description("Show the different versions for CoralGate.")
     @CommandPermission("coralgate.commands.version")
     public void version(final CommandActor actor) {
 
