@@ -19,9 +19,11 @@
 package cloud.gteam.coralgate.processor;
 
 import cloud.gteam.coralgate.CorePlugin;
+import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListener;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
+import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import com.github.retrooper.packetevents.protocol.ConnectionState;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.packettype.PacketTypeCommon;
@@ -52,285 +54,212 @@ public class NetworkProcessor implements PacketListener {
 
         final PacketTypeCommon packetTypeCommon = packetReceiveEvent.getPacketType();
 
-        /// Port filtering.
+        ///
+        /// SOURCE PORT FILTERING.
+        ///
 
         // This is the lowest dynamic port used by Linux.
         // Anything bellow means the port was forced to use that port and is therefore, not a real Minecraft client.
         if (inetSocketAddress.getPort() < 32768) {
 
-            // TODO: Add config to "silent" those messages.
-            CorePlugin.getLogger().severe("Invalid port used by client. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + "]");
+            // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+            logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Invalid port used by client.");
 
-            // Report IP to CoralGate API.
-            this.corePlugin.getApiManager().reportIp(ipAddress);
-
-            // Cancel the packet and close the connection.
-            packetReceiveEvent.setCancelled(true);
-            packetReceiveEvent.getUser().closeConnection();
+            // Block further logic.
             return;
 
-        // The port is ok, continue.
-        } else if (packetTypeCommon == PacketType.Status.Client.PING || packetTypeCommon == PacketType.Status.Client.REQUEST || packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE) {
+        }
+
+        /// Check different condition to trigger a MOTD packet check and blockage.
+
+        // Match MOTD related packets.
+        final boolean isStatusPacket = packetTypeCommon == PacketType.Status.Client.PING
+                || packetTypeCommon == PacketType.Status.Client.REQUEST
+                || packetTypeCommon == PacketType.Handshaking.Client.LEGACY_SERVER_LIST_PING;
+
+        /// Filter only packets that are used to get information about the server.
+
+        // Handshake is also a MOTD related packet in a certain state.
+        if (isStatusPacket || packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE) {
 
             // This is the lowest dynamic port used by Windows & Mac.
             // Since Linux players are "rare", we'll issue a warning statement about them.
             // Alongside that, we will block any server list ping to prevent bots from getting information about the server.
             // (server version, online players, player count...).
-            //
-            // This didn't age well, I'm now a Linux player...
-            if (inetSocketAddress.getPort() < 49152) {
+            final boolean suspiciousPort = inetSocketAddress.getPort() < 49152;
 
-                // Log about this suspicious connection.
+            // Block the first incoming MOTD related packet of an IP.
+            final boolean processMOTD = suspiciousPort
+                    || !this.corePlugin.getApiManager().isIpBlockedCache(ipAddress)
+                    || !this.corePlugin.getApiManager().isHealthy();
+
+            if (suspiciousPort) {
+
+                // Log this suspicious connection.
                 CorePlugin.getLogger().warning("Suspicious port used by client. Keep an eye out for " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + "]");
 
-                // Handshake logic is handled bellow.
-                if (packetTypeCommon != PacketType.Handshaking.Client.HANDSHAKE) {
-
-                    packetReceiveEvent.setCancelled(true);
-
-                    // Send a generic forged response.
-                    if (packetTypeCommon == PacketType.Status.Client.REQUEST) {
-                        packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusServerResponse("{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"CraftBukkit 26.1.1\",\"protocol\":775},\"enforcesSecureChat\":true}"));
-                    } else {
-                        packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusClientPing(packetReceiveEvent));
-                    }
-
-                    return;
-
-                }
-
-                // Report IP to CoralGate API.
+                // Report the IP to CoralGate API.
                 this.corePlugin.getApiManager().reportIp(ipAddress);
 
             }
 
-            if (packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE) {
+            if (processMOTD) {
 
-                final WrapperHandshakingClientHandshake wrapperHandshakingClientHandshake = new WrapperHandshakingClientHandshake(packetReceiveEvent);
+                // Packet responsible for the latency showup.
+                if (packetTypeCommon == PacketType.Status.Client.PING || packetTypeCommon == PacketType.Handshaking.Client.LEGACY_SERVER_LIST_PING) {
 
-                // Filter only 'STATUS' to not block logins.
-                if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.STATUS && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.STATUS) {
-
-                    // Prevent suspicious ports from getting 'STATUS'.
-                    if (inetSocketAddress.getPort() < 49152) {
-
-                        packetReceiveEvent.setCancelled(true);
-
-                    }
+                    // Cancel packet and send a "forged" response.
+                    packetReceiveEvent.setCancelled(true);
+                    packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusClientPing(packetReceiveEvent));
 
                     // Block further logic.
                     return;
 
                 }
 
-            // Run RESPONSE | PING logic.
-            } else {
+                // Packet responsible for the MOTD message and server related information (player count, version).
+                if (packetTypeCommon == PacketType.Status.Client.REQUEST) {
 
-                // Check if IP is not blocked and not in cache. This blocks first ping.
-                if (!this.corePlugin.getApiManager().isIpBlockedCache(ipAddress) || !this.corePlugin.getApiManager().isHealthy()) {
+                    // Cancel the packet and send a forged generic looking MOTD.
+                    packetReceiveEvent.setCancelled(true);
+                    packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusServerResponse(getForgedMOTD()));
 
-                    // Send a generic forged response.
-                    if (packetTypeCommon == PacketType.Status.Client.REQUEST) {
-                        packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusServerResponse("{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"CraftBukkit 26.1.1\",\"protocol\":775},\"enforcesSecureChat\":true}"));
-                    } else {
-                        packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusClientPing(packetReceiveEvent));
+                    return;
+
+                }
+
+                // Specific 'STATUS' handshake state.
+                // Yes the condition is "always true", but I prefer to keep this in case the protocol changes in future releases.
+                if (packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE) {
+
+                    final WrapperHandshakingClientHandshake wrapperHandshakingClientHandshake = new WrapperHandshakingClientHandshake(packetReceiveEvent);
+
+                    // 'STATUS' only.
+                    if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.STATUS && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.STATUS) {
+
+                        packetReceiveEvent.setCancelled(true);
+
+                        // Block further logic.
+                        return;
+
                     }
 
                 }
 
-                // Block processing if the API is unhealthy (down).
-                if (!this.corePlugin.getApiManager().isHealthy()) return;
+            }
 
-                // Don't send back the packet if the IP is blocked by the API.
+        }
+
+        /// Source port is ok, check IP now.
+
+
+        ///
+        /// API IP CHECK.
+        ///
+
+        // Match every login sequence related packet.
+        final boolean isLoginSequencePacket = packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE
+                || packetTypeCommon == PacketType.Login.Client.LOGIN_START
+                || packetTypeCommon == PacketType.Login.Client.ENCRYPTION_RESPONSE
+                || packetTypeCommon == PacketType.Login.Client.LOGIN_SUCCESS_ACK;
+
+        if (isStatusPacket || isLoginSequencePacket) {
+
+            if (this.corePlugin.getApiManager().isHealthy()) {
+
                 this.corePlugin.getApiManager().isIpBlocked(ipAddress).thenAccept(blocked -> {
 
-                    if (blocked) {
-
-                        // Log blocked ip.
-                        CorePlugin.getLogger().severe("IP is blocked by the API. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
-
-                        // Cancel the packet and close the connection.
-                        packetReceiveEvent.setCancelled(true);
-                        packetReceiveEvent.getUser().closeConnection();
-
-                    }
+                    if (blocked)
+                        // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+                        logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "IP is blocked by the API.");
 
                 });
+
+            }
+
+        }
+
+        ///
+        /// PACKET ORDER FILTERING.
+        ///
+
+        // Specific 'LOGIN' handshake login, the first packet in a legitimate connection sequence.
+        if (packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE) {
+
+            final WrapperHandshakingClientHandshake wrapperHandshakingClientHandshake = new WrapperHandshakingClientHandshake(packetReceiveEvent);
+
+            if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.LOGIN && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.LOGIN)
+                this.connectionState.put(inetSocketAddress, packetTypeCommon);
+
+            // Block further logic.
+            return;
+
+        }
+
+        // Handshake has passed (or skipped).
+        if (packetTypeCommon == PacketType.Login.Client.LOGIN_START) {
+
+            if (this.connectionState.getOrDefault(inetSocketAddress, null) != PacketType.Handshaking.Client.HANDSHAKE) {
+
+                // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+                logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Missing handshake procedure.");
 
                 // Block further logic.
                 return;
 
             }
 
-        }
+            final WrapperLoginClientLoginStart wrapperLoginClientLoginStart = new WrapperLoginClientLoginStart(packetReceiveEvent);
 
-        /// Proper login procedure checking.
+            // Filter debug usernames.
+            if (wrapperLoginClientLoginStart.getUsername().startsWith("Player")) {
 
-        // First packet fired when a client initiates a connection.
-        if (packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE) {
+                // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+                logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Bot-like username pattern detected.");
 
-            final WrapperHandshakingClientHandshake wrapperHandshakingClientHandshake = new WrapperHandshakingClientHandshake(packetReceiveEvent);
-
-            // Client login.
-            if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.LOGIN && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.LOGIN) {
-
-                // First connection step.
-                this.connectionState.put(inetSocketAddress, packetTypeCommon);
-
-            }
-
-            // Block further logic.
-            return;
-
-        // After handshake has passed.
-        } else if (packetTypeCommon == PacketType.Login.Client.LOGIN_START) {
-
-            // Checking if handshake has passed successfully.
-            if (this.connectionState.getOrDefault(inetSocketAddress, null) == PacketType.Handshaking.Client.HANDSHAKE) {
-
-                final WrapperLoginClientLoginStart wrapperLoginClientLoginStartMappings = new WrapperLoginClientLoginStart(packetReceiveEvent);
-
-                // Check for obvious Bot names, most of the time "Player".
-                if (wrapperLoginClientLoginStartMappings.getUsername().startsWith("Player")) {
-
-                    // Log bot looking name.
-                    CorePlugin.getLogger().severe("Bot looking name detected. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
-
-                    // Report IP to CoralGate API.
-                    this.corePlugin.getApiManager().reportIp(ipAddress);
-
-                    // Cancel the packet and close the connection.
-                    packetReceiveEvent.setCancelled(true);
-                    packetReceiveEvent.getUser().closeConnection();
-                    return;
-
-                // If the handshake and login procedure are good while not having a bot looking name, continue.
-                } else {
-
-                    // Check if the IP is blocked by the API.
-                    try {
-
-                        if (this.corePlugin.getApiManager().isIpBlocked(ipAddress).get()) {
-
-                            // Log blocked ip.
-                            CorePlugin.getLogger().severe("IP is blocked by the API. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
-
-                            // Cancel the packet and close the connection.
-                            packetReceiveEvent.setCancelled(true);
-                            packetReceiveEvent.getUser().closeConnection();
-                            return;
-
-                        }
-
-                    } catch (final Exception e) {
-                        CorePlugin.getLogger().severe("Couldn't fetch the blocked status of an IP. Is the API down? See error: " + e.getMessage());
-                    }
-
-                    this.connectionState.put(inetSocketAddress, packetTypeCommon);
-
-                }
-
-            // User has skipped the proper handshake.
-            } else {
-
-                // Log invalid handshake procedure.
-                CorePlugin.getLogger().severe("Missing handshake procedure. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
-
-                // Report IP to CoralGate API.
-                this.corePlugin.getApiManager().reportIp(ipAddress);
-
-                // Cancel the packet and close the connection.
-                packetReceiveEvent.setCancelled(true);
-                packetReceiveEvent.getUser().closeConnection();
+                // Block further logic.
                 return;
 
             }
 
+            this.connectionState.put(inetSocketAddress, packetTypeCommon);
+
             // Block further logic.
             return;
+
+        }
 
         // After login start has passed. This is only for servers that are in online mode.
-        } else if (packetTypeCommon == PacketType.Login.Client.ENCRYPTION_RESPONSE && this.corePlugin.isOnlineMode()) {
+        if (packetTypeCommon == PacketType.Login.Client.ENCRYPTION_RESPONSE && this.corePlugin.isOnlineMode()) {
 
-            // Checking if encryption request has passed successfully.
-            if (this.connectionState.getOrDefault(inetSocketAddress, null) == PacketType.Login.Server.ENCRYPTION_REQUEST) {
-
-                //final WrapperLoginClientEncryptionResponse wrapperLoginClientEncryptionResponse = new WrapperLoginClientEncryptionResponse(packetReceiveEvent);
-
-                // TODO: Check stuff with the encryption keys.
-
-                // Everything was validated, continue.
-                this.connectionState.put(inetSocketAddress, packetTypeCommon);
-
-            // User has skipped the proper login start.
-            } else {
-
-                // Log invalid handshake procedure.
-                CorePlugin.getLogger().severe("Missing login start procedure. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
-
-                // Report IP to CoralGate API.
-                this.corePlugin.getApiManager().reportIp(ipAddress);
-
-                // Cancel the packet and close the connection.
-                packetReceiveEvent.setCancelled(true);
-                packetReceiveEvent.getUser().closeConnection();
-                return;
-
-            }
-
-            // Block further logic.
-            return;
-
-        // After everything was completed, the server lets them in and the user finalizes their connection.
-        } else if (packetTypeCommon == PacketType.Login.Client.LOGIN_SUCCESS_ACK) {
-
-            // Checking if login success and encryption response passed successfully (or not if server is not in online mode).
-            if (this.connectionState.getOrDefault(inetSocketAddress, null) == PacketType.Login.Server.LOGIN_SUCCESS) {
-
-                // Everything was validated, continue.
-                this.connectionState.put(inetSocketAddress, PacketType.Login.Client.LOGIN_SUCCESS_ACK);
-
-            // User has skipped the encryption response (if the server is in online mode) or the server did not send login success.
-            } else {
-
-                // Log invalid encryption response procedure.
-                CorePlugin.getLogger().severe("Missing login success procedure. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
-
-                // Report IP to CoralGate API.
-                this.corePlugin.getApiManager().reportIp(ipAddress);
-
-                // Cancel the packet and close the connection.
-                packetReceiveEvent.setCancelled(true);
-                packetReceiveEvent.getUser().closeConnection();
-                return;
-
-            }
+            // Validate state against certain conditions: previous ENCRYPTION_REQUEST
+            // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+            verifyAndTransitionState(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, PacketType.Login.Server.ENCRYPTION_REQUEST, packetTypeCommon, "Missing login start procedure.");
 
             // Block further logic.
             return;
 
         }
 
-        /// Block packets if the login procedure is not followed.
+        if (packetTypeCommon == PacketType.Login.Client.LOGIN_SUCCESS_ACK) {
 
-        // The player (most likely bot) didn't follow the proper login procedure, close their connection.
-        // Still need to account for the no encryption response on non-online mode servers.
-        if (this.connectionState.getOrDefault(inetSocketAddress, null) != PacketType.Login.Client.LOGIN_SUCCESS_ACK) {
+            // Validate state against certain conditions: previous LOGIN_SUCCESS
+            // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+            verifyAndTransitionState(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, PacketType.Login.Server.LOGIN_SUCCESS, packetTypeCommon, "Missing login success procedure.");
 
-            // Log invalid encryption response procedure.
-            CorePlugin.getLogger().severe("Missing full connection procedure. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
-
-            // Report IP to CoralGate API.
-            this.corePlugin.getApiManager().reportIp(ipAddress);
-
-            // Cancel the packet and close the connection.
-            packetReceiveEvent.setCancelled(true);
-            packetReceiveEvent.getUser().closeConnection();
+            // Block further logic.
+            return;
 
         }
 
-        // Everything is good!
-        //System.out.println("Accepted incoming packet from " + inetSocketAddress + " (" + packetTypeCommon.getName() + ")"); TODO: add "honey-pot" server option to display such message
+        final PacketTypeCommon expectedFinalState = PacketEvents.getAPI().getServerManager().getVersion().isOlderThanOrEquals(ServerVersion.V_1_20_2)
+                ? PacketType.Login.Server.LOGIN_SUCCESS
+                : PacketType.Login.Client.LOGIN_SUCCESS_ACK;
+
+        if (this.connectionState.getOrDefault(inetSocketAddress, null) != expectedFinalState)
+            logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Missing full connection procedure.");
+
+        /// All checks passed!
 
     }
 
@@ -342,110 +271,106 @@ public class NetworkProcessor implements PacketListener {
 
         final PacketTypeCommon packetTypeCommon = packetSendEvent.getPacketType();
 
-        /// Proper login procedure checking.
+        ///
+        /// PACKET ORDER FILTERING.
+        ///
+
+        // Whitelisted MOTD related packets.
+        if (packetTypeCommon == PacketType.Status.Server.RESPONSE || packetTypeCommon == PacketType.Status.Server.PONG)
+            return;
 
         // Client should have passed login start procedure.
         if (packetTypeCommon == PacketType.Login.Server.ENCRYPTION_REQUEST && this.corePlugin.isOnlineMode()) {
 
-            // Check if it did. If yes, continue.
-            if (this.connectionState.getOrDefault(inetSocketAddress, null) == PacketType.Login.Client.LOGIN_START) {
-
-                this.connectionState.put(inetSocketAddress, PacketType.Login.Server.ENCRYPTION_REQUEST);
-
-            } else {
-
-                // Log invalid encryption response procedure.
-                CorePlugin.getLogger().severe("Missing login start procedure. Closing connection from " + inetSocketAddress + ". [S->C | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
-
-                // Report IP to CoralGate API.
-                this.corePlugin.getApiManager().reportIp(ipAddress);
-
-                // Cancel the packet and close the connection.
-                packetSendEvent.setCancelled(true);
-                packetSendEvent.getUser().closeConnection();
-                return;
-
-            }
-
-            // Block further logic.
-            return;
-
-        // Client should have sent the encryption response (if online mode).
-        } else if (packetTypeCommon == PacketType.Login.Server.SET_COMPRESSION && this.corePlugin.getCompressionThreshold() >= 0) {
-
-            // Check if it did. If yes, continue.
-            if (this.connectionState.getOrDefault(inetSocketAddress, null) == (this.corePlugin.isOnlineMode() ? PacketType.Login.Client.ENCRYPTION_RESPONSE : PacketType.Login.Client.LOGIN_START)) {
-
-                this.connectionState.put(inetSocketAddress, PacketType.Login.Server.SET_COMPRESSION);
-
-            } else {
-
-                // Log invalid encryption response procedure.
-                CorePlugin.getLogger().severe("Missing encryption response or login start procedure. Closing connection from " + inetSocketAddress + ". [S->C | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
-
-                // Report IP to CoralGate API.
-                this.corePlugin.getApiManager().reportIp(ipAddress);
-
-                // Cancel the packet and close the connection.
-                packetSendEvent.setCancelled(true);
-                packetSendEvent.getUser().closeConnection();
-                return;
-
-            }
-
-            // Block further logic.
-            return;
-
-        // Server should have set compression.
-        } else if (packetTypeCommon == PacketType.Login.Server.LOGIN_SUCCESS) {
-
-            // Establish the expected packet type.
-            final PacketTypeCommon expectedPacketTypeCommon = (this.corePlugin.isOnlineMode() ? this.corePlugin.getCompressionThreshold() >= 0 ? PacketType.Login.Server.SET_COMPRESSION : PacketType.Login.Client.ENCRYPTION_RESPONSE
-                    : this.corePlugin.getCompressionThreshold() >= 0 ? PacketType.Login.Server.SET_COMPRESSION : PacketType.Login.Client.LOGIN_START);
-
-            // Check if it did. If yes, continue.
-            if (this.connectionState.getOrDefault(inetSocketAddress, null) == expectedPacketTypeCommon) {
-
-                this.connectionState.put(inetSocketAddress, PacketType.Login.Server.LOGIN_SUCCESS);
-
-            } else {
-
-                // Log invalid encryption response procedure.
-                CorePlugin.getLogger().severe("Missing set compression procedure. Closing connection from " + inetSocketAddress + ". [S->C | " + packetTypeCommon.getName() + " | " + this.connectionState.getOrDefault(inetSocketAddress, null) + "]");
-
-                // Report IP to CoralGate API.
-                this.corePlugin.getApiManager().reportIp(ipAddress);
-
-                // Cancel the packet and close the connection.
-                packetSendEvent.setCancelled(true);
-                packetSendEvent.getUser().closeConnection();
-                return;
-
-            }
+            // Validate state against certain conditions: previous LOGIN_START
+            // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+            verifyAndTransitionState(packetSendEvent, inetSocketAddress, ipAddress, packetTypeCommon, PacketType.Login.Client.LOGIN_START, packetTypeCommon, "Missing login start procedure.");
 
             // Block further logic.
             return;
 
         }
 
-        // Whitelisted packets that should not be blocked, even if procedure is not complete.
-        if (packetTypeCommon == PacketType.Status.Server.RESPONSE || packetTypeCommon == PacketType.Status.Server.PONG) {
+        // Client should have sent the encryption response (if online mode). The compression level can be set to -1 (disabled) on proxies for less network/cpu overhead.
+        if (packetTypeCommon == PacketType.Login.Server.SET_COMPRESSION && this.corePlugin.getCompressionThreshold() >= 0) {
+
+            final PacketTypeCommon requiredPacketTypeCommon = this.corePlugin.isOnlineMode() ? PacketType.Login.Client.ENCRYPTION_RESPONSE : PacketType.Login.Client.LOGIN_START;
+
+            // Validate state against certain conditions: previous ENCRYPTION_RESPONSE (if online mode) else LOGIN_START
+            // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+            verifyAndTransitionState(packetSendEvent, inetSocketAddress, ipAddress, packetTypeCommon, requiredPacketTypeCommon, packetTypeCommon, "Missing encryption response or login start procedure.");
+
+            // Block further logic.
             return;
+
         }
 
-        /// Block packets if the login procedure is not followed.
+        if (packetTypeCommon == PacketType.Login.Server.LOGIN_SUCCESS) {
+
+            final PacketTypeCommon requiredPacketTypeCommon = this.corePlugin.isOnlineMode()
+                    ? (this.corePlugin.getCompressionThreshold() >= 0 ? PacketType.Login.Server.SET_COMPRESSION : PacketType.Login.Client.ENCRYPTION_RESPONSE)
+                    : (this.corePlugin.getCompressionThreshold() >= 0 ? PacketType.Login.Server.SET_COMPRESSION : PacketType.Login.Client.LOGIN_START);
+
+            // Validate state against certain conditions: previous SET_COMPRESSION (if above 0) else ENCRYPTION_RESPONSE (if online mode) else LOGIN_START
+            // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+            verifyAndTransitionState(packetSendEvent, inetSocketAddress, ipAddress, packetTypeCommon, requiredPacketTypeCommon, packetTypeCommon, "Missing set compression procedure.");
+
+            // Block further logic.
+            return;
+
+        }
 
         // Connection procedure is not done yet, block outgoing packets.
-        if (this.connectionState.getOrDefault(inetSocketAddress, null) != PacketType.Login.Client.LOGIN_SUCCESS_ACK) {
-
-            // Cancel the packet until the connection procedure is fulfilled.
+        if (this.connectionState.getOrDefault(inetSocketAddress, null) != PacketType.Login.Client.LOGIN_SUCCESS_ACK)
             packetSendEvent.setCancelled(true);
 
-        }
+        /// All checks passed!
 
-        // Everything is good!
-        //System.out.println("Accepted outgoing packet to " + inetSocketAddress + " (" + packetTypeCommon.getName() + ")"); TODO: add "honey-pot" server option to display such message
+    }
 
+    private void logAndClose(final PacketReceiveEvent packetReceiveEvent, final InetSocketAddress inetSocketAddress, final String ipAddress, final PacketTypeCommon packetTypeCommon, final String reason) {
+
+        CorePlugin.getLogger().severe(reason + " Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + "]");
+        this.corePlugin.getApiManager().reportIp(ipAddress);
+
+        packetReceiveEvent.setCancelled(true);
+        packetReceiveEvent.getUser().closeConnection();
+
+    }
+
+    private void logAndClose(final PacketSendEvent packetSendEvent, final InetSocketAddress inetSocketAddress, final String ipAddress, final PacketTypeCommon packetTypeCommon, final String reason) {
+
+        CorePlugin.getLogger().severe(reason + " Closing connection from " + inetSocketAddress + ". [S->C | " + packetTypeCommon.getName() + "]");
+
+        this.corePlugin.getApiManager().reportIp(ipAddress);
+
+        packetSendEvent.setCancelled(true);
+        packetSendEvent.getUser().closeConnection();
+
+    }
+
+    private void verifyAndTransitionState(final PacketReceiveEvent packetReceiveEvent, final InetSocketAddress inetSocketAddress, final String ipAddress, final PacketTypeCommon packetTypeCommon, final PacketTypeCommon requiredState, final PacketTypeCommon targetState, final String reason) {
+
+        if (this.connectionState.getOrDefault(inetSocketAddress, null) == requiredState) {
+
+            this.connectionState.put(inetSocketAddress, targetState);
+
+        } else logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, reason);
+
+    }
+
+    private void verifyAndTransitionState(final PacketSendEvent packetSendEvent, final InetSocketAddress inetSocketAddress, final String ipAddress, final PacketTypeCommon packetTypeCommon, final PacketTypeCommon requiredState, final PacketTypeCommon targetState, final String reason) {
+
+        if (this.connectionState.getOrDefault(inetSocketAddress, null) == requiredState) {
+
+            this.connectionState.put(inetSocketAddress, targetState);
+
+        } else logAndClose(packetSendEvent, inetSocketAddress, ipAddress, packetTypeCommon, reason);
+
+    }
+
+    private String getForgedMOTD() {
+        return "{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"CraftBukkit 26.1.1\",\"protocol\":775},\"enforcesSecureChat\":true}";
     }
 
 }
