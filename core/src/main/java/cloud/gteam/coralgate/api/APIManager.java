@@ -120,7 +120,7 @@ public class APIManager {
 
     private boolean parseBlockedResponse(final Response response) {
 
-        final String expectedField = this.corePlugin.getConfigManager().getConfig().getExpectedTriggerField();
+        final String expectedField = this.corePlugin.getConfigManager().getConfig().getApiTriggerField();
 
         try {
 
