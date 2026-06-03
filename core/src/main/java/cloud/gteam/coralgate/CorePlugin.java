@@ -65,7 +65,7 @@ public final class CorePlugin {
         this.configManager.load();
 
         // Get latest config file version.
-        final String latestConfigVersion = new ConfigModel().getConfigVersion();
+        final String latestConfigVersion = this.configManager.getLatestConfigVersion();
 
         // Compare to internal configuration version to see if it's outdated.
         if (!Objects.equals(latestConfigVersion, this.configManager.getConfig().getConfigVersion())) logger.warning("Please consider upgrading your configuration file to the latest version: '" + latestConfigVersion + "'.");

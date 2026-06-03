@@ -19,67 +19,81 @@
 package cloud.gteam.coralgate.config;
 
 import cloud.gteam.coralgate.CorePlugin;
-import org.spongepowered.configurate.CommentedConfigurationNode;
-import org.spongepowered.configurate.hocon.HoconConfigurationLoader;
-import org.spongepowered.configurate.objectmapping.ObjectMapper;
+import dev.dejvokep.boostedyaml.YamlDocument;
+import dev.dejvokep.boostedyaml.settings.dumper.DumperSettings;
+import dev.dejvokep.boostedyaml.settings.general.GeneralSettings;
+import dev.dejvokep.boostedyaml.settings.loader.LoaderSettings;
+import dev.dejvokep.boostedyaml.settings.updater.UpdaterSettings;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 
 public class ConfigManager {
 
-    private final File dataFolder;
+    private final String latestConfigVersion = "0.2.0";
+
+    private final String configFileName;
     private final File configFile;
+    private YamlDocument document;
     private ConfigModel config;
-    private final HoconConfigurationLoader hoconConfigurationLoader;
 
     public ConfigManager(final File dataFolder, final String configFileName) {
-        this.dataFolder = dataFolder;
+        this.configFileName = configFileName;
         this.configFile = new File(dataFolder, configFileName);
-        this.hoconConfigurationLoader = HoconConfigurationLoader .builder()
-                .path(this.configFile.toPath())
-                .indent(2)
-                .defaultOptions(options -> options
-                        .shouldCopyDefaults(true)
-                        .header("CoralGate - https://github.com/GTeamX/CoralGate\nCopyright (C) 2026 GTeamX.\nConfiguration file.")
-                        .serializers(s -> s.registerAnnotatedObjects(ObjectMapper.factory()))
-                )
-                .build();
     }
 
     public void load() {
 
-        // Load config file, create a new one if it doesn't exist.
-        if (!this.configFile.exists()) {
-
-            CorePlugin.getLogger().info("Couldn't find config.yml file. Generating default config...");
-
-            this.config = new ConfigModel();
-            save();
-
-            return;
-
-        }
-
         try {
 
-            // Read config file into a node.
-            final CommentedConfigurationNode node = this.hoconConfigurationLoader.load();
+            // Grab the pristine template file out of your plugin's resources/jar.
+            final InputStream defaultStream = getClass().getClassLoader().getResourceAsStream(this.configFileName);
 
-            // Map the node to POJO.
-            this.config = node.get(ConfigModel.class);
+            if (defaultStream == null) {
+                CorePlugin.getLogger().severe("Could not find default resource file: " + this.configFileName);
+                return;
+            }
 
-            if (this.config == null) this.config = new ConfigModel();
-
-            CorePlugin.getLogger().info("Successfully loaded config.yml!");
-
-        } catch (final Exception e) {
-
-            CorePlugin.getLogger().severe("Couldn't load config.yml. Did the file get corrupted? See error: " + e.getMessage());
-
-            // Fallback to avoid NullPointerException.
             this.config = new ConfigModel();
 
+            // Create, load, and automatically update the config file.
+            this.document = YamlDocument.create(
+                    this.configFile,
+                    defaultStream,
+                    GeneralSettings.DEFAULT,
+                    LoaderSettings.builder().setAutoUpdate(true).build(),
+                    DumperSettings.DEFAULT,
+                    UpdaterSettings.DEFAULT
+            );
+
+            mapFields();
+
+            CorePlugin.getLogger().info("Successfully loaded " + this.configFileName + "!");
+
+        } catch (final IOException e) {
+            CorePlugin.getLogger().severe("Couldn't load " + this.configFileName + ". Did the file get corrupted? See error: " + e.getMessage());
         }
+
+    }
+
+    private void mapFields() {
+
+        if (this.document == null) return;
+
+        this.config.setConfigVersion(this.document.getString("version", "0.2.0"));
+
+        this.config.setNormalPrefix(this.document.getString("prefixes.normal", "§b§lCoralGate §7» §r"));
+        this.config.setWarningPrefix(this.document.getString("prefixes.warning", "§6§lCoralGate §7» §r"));
+        this.config.setErrorPrefix(this.document.getString("prefixes.error", "§c§lCoralGate §7» §r"));
+
+        this.config.setAllowApiUsage(this.document.getBoolean("api-settings.allow-usage", true));
+        this.config.setApiHealthCheck(this.document.getBoolean("api-settings.health-check", true));
+        this.config.setApiCacheTime(this.document.getInt("api-settings.cache-time", 10));
+        this.config.setApiHost(this.document.getString("api-settings.host", "https://api.gteam.cloud/coralgate/"));
+        this.config.setApiVersion(this.document.getString("api-settings.version", "v2"));
+        this.config.setApiTriggerField(this.document.getString("api-settings.trigger-field", "blocked_status"));
+        this.config.setApiTriggerFieldValue(this.document.getString("api-settings.trigger-field-value", "true"));
 
     }
 
@@ -87,30 +101,20 @@ public class ConfigManager {
 
         try {
 
-            // Generate data folder if it doesn't exist.
             if (!this.configFile.getParentFile().exists()) {
                 if (!this.configFile.getParentFile().mkdirs()) CorePlugin.getLogger().severe("Couldn't create data folders. Is the directory read-only? No error to display.");
             }
 
-            // Map the POJO back to a node.
-            final CommentedConfigurationNode node = this.hoconConfigurationLoader.createNode(this.hoconConfigurationLoader.defaultOptions());
-            node.set(ConfigModel.class, this.config);
+            if (this.document != null) this.document.save();
 
-            // Write node to file.
-            this.hoconConfigurationLoader.save(node);
-
-        } catch (final Exception e) {
-            CorePlugin.getLogger().severe("Couldn't write data to config.yml. Is the directory read-only? See error: " + e.getMessage());
+        } catch (final IOException e) {
+            CorePlugin.getLogger().severe("Couldn't write data to " + this.configFileName + ". Is the directory read-only? See error:" + e.getMessage());
         }
 
     }
 
-    public File getDataFolder() {
-        return this.dataFolder;
-    }
-
-    public File getConfigFile() {
-        return this.configFile;
+    public String getLatestConfigVersion() {
+        return this.latestConfigVersion;
     }
 
     public ConfigModel getConfig() {
