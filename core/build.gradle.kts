@@ -38,7 +38,7 @@ dependencies {
     compileOnly("com.google.code.gson:gson:2.14.0")
     implementation("org.asynchttpclient:async-http-client:3.0.10")
     implementation("org.jetbrains:annotations:26.1.0")
-    implementation("dev.dejvokep:boosted-yaml:1.3.6")
+    implementation("dev.dejvokep:boosted-yaml:1.3.7")
 
     compileOnly("com.github.retrooper:packetevents-api:$packetEventsVersion")
 
