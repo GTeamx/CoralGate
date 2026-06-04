@@ -107,50 +107,44 @@ public class NetworkProcessor implements PacketListener {
             if (processMOTD) {
 
                 // Packet responsible for the latency showup.
-                switch (packetTypeCommon) {
+                if (packetTypeCommon == PacketType.Status.Client.PING || packetTypeCommon == PacketType.Handshaking.Client.LEGACY_SERVER_LIST_PING) {
 
-                    case PacketType.Status.Client.PING, PacketType.Handshaking.Client.LEGACY_SERVER_LIST_PING -> {
+                    // Cancel packet and send a "forged" response.
+                    packetReceiveEvent.setCancelled(true);
+                    packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusClientPing(packetReceiveEvent));
 
-                        // Cancel packet and send a "forged" response.
+                    // Block further logic.
+                    return;
+
+                }
+
+                // Packet responsible for the MOTD message and server related information (player count, version).
+                if (packetTypeCommon == PacketType.Status.Client.REQUEST) {
+
+                    // Cancel the packet and send a forged generic looking MOTD.
+                    packetReceiveEvent.setCancelled(true);
+                    packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusServerResponse(getForgedMOTD()));
+
+                    // Block further logic.
+                    return;
+
+                }
+
+                // Specific 'STATUS' handshake state.
+                // Yes the condition is "always true", but I prefer to keep this in case the protocol changes in future releases.
+                if (packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE) {
+
+                    final WrapperHandshakingClientHandshake wrapperHandshakingClientHandshake = new WrapperHandshakingClientHandshake(packetReceiveEvent);
+
+                    // 'STATUS' only.
+                    if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.STATUS && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.STATUS) {
+
                         packetReceiveEvent.setCancelled(true);
-                        packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusClientPing(packetReceiveEvent));
 
                         // Block further logic.
                         return;
 
                     }
-
-
-                    // Packet responsible for the MOTD message and server related information (player count, version).
-                    case PacketType.Status.Client.REQUEST -> {
-
-                        // Cancel the packet and send a forged generic looking MOTD.
-                        packetReceiveEvent.setCancelled(true);
-                        packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusServerResponse(getForgedMOTD()));
-
-                        // Block further logic.
-                        return;
-
-                    }
-
-
-                    // Specific 'STATUS' handshake state.
-                    case PacketType.Handshaking.Client.HANDSHAKE -> {
-
-                        final WrapperHandshakingClientHandshake wrapperHandshakingClientHandshake = new WrapperHandshakingClientHandshake(packetReceiveEvent);
-
-                        // 'STATUS' only.
-                        if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.STATUS && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.STATUS) {
-
-                            packetReceiveEvent.setCancelled(true);
-
-                            // Block further logic.
-                            return;
-
-                        }
-                    }
-
-                    default -> {}
 
                 }
 
