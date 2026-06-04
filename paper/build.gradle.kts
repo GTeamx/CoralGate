@@ -59,18 +59,11 @@ tasks.processResources {
     // Replace properties.
     filesMatching("platform.properties") {
 
-        expand("name" to project.name,
-
+        expand(
+            "name" to project.name,
             "version" to project.version,
-
-            "core" to mapOf(
-                "version" to coreVersion
-            ),
-
-            "packetevents" to mapOf(
-                "version" to packetEventsVersion
-            )
-
+            "coreVersion" to coreVersion,
+            "packetEventsVersion" to packetEventsVersion
         )
 
     }
@@ -82,10 +75,7 @@ tasks.shadowJar {
     // Wait for the core shadowJar to finish.
     dependsOn(project(":core").tasks.named("shadowJar"))
 
-    // Rename the output jar.
-    val coreVersion: String by rootProject.extra
-
-    archiveBaseName.set("CoralGate-$coreVersion-Paper")
+    archiveBaseName.set("CoralGate-Paper")
     archiveVersion.set(project.version.toString())
     archiveClassifier.set("")
 
