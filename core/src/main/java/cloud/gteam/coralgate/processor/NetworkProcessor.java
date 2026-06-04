@@ -27,6 +27,7 @@ import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import com.github.retrooper.packetevents.protocol.ConnectionState;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.packettype.PacketTypeCommon;
+import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 import com.github.retrooper.packetevents.wrapper.handshaking.client.WrapperHandshakingClientHandshake;
 import com.github.retrooper.packetevents.wrapper.login.client.WrapperLoginClientLoginStart;
 import com.github.retrooper.packetevents.wrapper.status.client.WrapperStatusClientPing;
@@ -54,9 +55,9 @@ public class NetworkProcessor implements PacketListener {
 
         final PacketTypeCommon packetTypeCommon = packetReceiveEvent.getPacketType();
 
-        ///
-        /// SOURCE PORT FILTERING.
-        ///
+        /*
+        * SOURCE PORT FILTERING.
+        */
 
         // This is the lowest dynamic port used by Linux.
         // Anything bellow means the port was forced to use that port and is therefore, not a real Minecraft client.
@@ -70,14 +71,14 @@ public class NetworkProcessor implements PacketListener {
 
         }
 
-        /// Check different condition to trigger a MOTD packet check and blockage.
+        /* Check different condition to trigger a MOTD packet check and blockage. */
 
         // Match MOTD related packets.
         final boolean isStatusPacket = packetTypeCommon == PacketType.Status.Client.PING
                 || packetTypeCommon == PacketType.Status.Client.REQUEST
                 || packetTypeCommon == PacketType.Handshaking.Client.LEGACY_SERVER_LIST_PING;
 
-        /// Filter only packets that are used to get information about the server.
+        /* Filter only packets that are used to get information about the server. */
 
         // Handshake is also a MOTD related packet in a certain state.
         if (isStatusPacket || packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE) {
@@ -106,43 +107,50 @@ public class NetworkProcessor implements PacketListener {
             if (processMOTD) {
 
                 // Packet responsible for the latency showup.
-                if (packetTypeCommon == PacketType.Status.Client.PING || packetTypeCommon == PacketType.Handshaking.Client.LEGACY_SERVER_LIST_PING) {
+                switch (packetTypeCommon) {
 
-                    // Cancel packet and send a "forged" response.
-                    packetReceiveEvent.setCancelled(true);
-                    packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusClientPing(packetReceiveEvent));
+                    case PacketType.Status.Client.PING, PacketType.Handshaking.Client.LEGACY_SERVER_LIST_PING -> {
 
-                    // Block further logic.
-                    return;
-
-                }
-
-                // Packet responsible for the MOTD message and server related information (player count, version).
-                if (packetTypeCommon == PacketType.Status.Client.REQUEST) {
-
-                    // Cancel the packet and send a forged generic looking MOTD.
-                    packetReceiveEvent.setCancelled(true);
-                    packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusServerResponse(getForgedMOTD()));
-
-                    return;
-
-                }
-
-                // Specific 'STATUS' handshake state.
-                // Yes the condition is "always true", but I prefer to keep this in case the protocol changes in future releases.
-                if (packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE) {
-
-                    final WrapperHandshakingClientHandshake wrapperHandshakingClientHandshake = new WrapperHandshakingClientHandshake(packetReceiveEvent);
-
-                    // 'STATUS' only.
-                    if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.STATUS && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.STATUS) {
-
+                        // Cancel packet and send a "forged" response.
                         packetReceiveEvent.setCancelled(true);
+                        packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusClientPing(packetReceiveEvent));
 
                         // Block further logic.
                         return;
 
                     }
+
+
+                    // Packet responsible for the MOTD message and server related information (player count, version).
+                    case PacketType.Status.Client.REQUEST -> {
+
+                        // Cancel the packet and send a forged generic looking MOTD.
+                        packetReceiveEvent.setCancelled(true);
+                        packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusServerResponse(getForgedMOTD()));
+
+                        // Block further logic.
+                        return;
+
+                    }
+
+
+                    // Specific 'STATUS' handshake state.
+                    case PacketType.Handshaking.Client.HANDSHAKE -> {
+
+                        final WrapperHandshakingClientHandshake wrapperHandshakingClientHandshake = new WrapperHandshakingClientHandshake(packetReceiveEvent);
+
+                        // 'STATUS' only.
+                        if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.STATUS && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.STATUS) {
+
+                            packetReceiveEvent.setCancelled(true);
+
+                            // Block further logic.
+                            return;
+
+                        }
+                    }
+
+                    default -> {}
 
                 }
 
@@ -150,12 +158,11 @@ public class NetworkProcessor implements PacketListener {
 
         }
 
-        /// Source port is ok, check IP now.
+        /* Source port is ok, check IP now. */
 
-
-        ///
-        /// API IP CHECK.
-        ///
+        /*
+        * API IP CHECK.
+        */
 
         // Match every login sequence related packet.
         final boolean isLoginSequencePacket = packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE
@@ -179,9 +186,9 @@ public class NetworkProcessor implements PacketListener {
 
         }
 
-        ///
-        /// PACKET ORDER FILTERING.
-        ///
+        /*
+        * PACKET ORDER FILTERING.
+        */
 
         // Specific 'LOGIN' handshake login, the first packet in a legitimate connection sequence.
         if (packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE) {
@@ -229,7 +236,7 @@ public class NetworkProcessor implements PacketListener {
 
         }
 
-        // After login start has passed. This is only for servers that are in online mode.
+        // After login start has passed and the server sent an encryption request. This is only for servers that are in online mode.
         if (packetTypeCommon == PacketType.Login.Client.ENCRYPTION_RESPONSE && this.corePlugin.isOnlineMode()) {
 
             // Validate state against certain conditions: previous ENCRYPTION_REQUEST
@@ -259,7 +266,7 @@ public class NetworkProcessor implements PacketListener {
         if (this.connectionState.getOrDefault(inetSocketAddress, null) != expectedFinalState)
             logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Missing full connection procedure.");
 
-        /// All checks passed!
+        /* All checks passed! */
 
     }
 
@@ -271,9 +278,9 @@ public class NetworkProcessor implements PacketListener {
 
         final PacketTypeCommon packetTypeCommon = packetSendEvent.getPacketType();
 
-        ///
-        /// PACKET ORDER FILTERING.
-        ///
+        /*
+        * PACKET ORDER FILTERING.
+        */
 
         // Whitelisted MOTD related packets.
         if (packetTypeCommon == PacketType.Status.Server.RESPONSE || packetTypeCommon == PacketType.Status.Server.PONG)
@@ -294,7 +301,9 @@ public class NetworkProcessor implements PacketListener {
         // Client should have sent the encryption response (if online mode). The compression level can be set to -1 (disabled) on proxies for less network/cpu overhead.
         if (packetTypeCommon == PacketType.Login.Server.SET_COMPRESSION && this.corePlugin.getCompressionThreshold() >= 0) {
 
-            final PacketTypeCommon requiredPacketTypeCommon = this.corePlugin.isOnlineMode() ? PacketType.Login.Client.ENCRYPTION_RESPONSE : PacketType.Login.Client.LOGIN_START;
+            final PacketTypeCommon requiredPacketTypeCommon = this.corePlugin.isOnlineMode()
+                    ? PacketType.Login.Client.ENCRYPTION_RESPONSE
+                    : PacketType.Login.Client.LOGIN_START;
 
             // Validate state against certain conditions: previous ENCRYPTION_RESPONSE (if online mode) else LOGIN_START
             // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
@@ -320,11 +329,16 @@ public class NetworkProcessor implements PacketListener {
 
         }
 
+        // Get the proper login packet based off the client version.
+        final PacketTypeCommon requiredPacketTypeCommon = packetSendEvent.getUser().getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_20_2)
+                ? PacketType.Login.Client.LOGIN_SUCCESS_ACK
+                : PacketType.Login.Server.LOGIN_SUCCESS;
+
         // Connection procedure is not done yet, block outgoing packets.
-        if (this.connectionState.getOrDefault(inetSocketAddress, null) != PacketType.Login.Client.LOGIN_SUCCESS_ACK)
+        if (this.connectionState.getOrDefault(inetSocketAddress, null) != requiredPacketTypeCommon)
             packetSendEvent.setCancelled(true);
 
-        /// All checks passed!
+        /* All checks passed! */
 
     }
 
