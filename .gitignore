@@ -11,3 +11,4 @@
 */run
 *pom.xml.versionsBackup
 /build/
+/scanner/out/
