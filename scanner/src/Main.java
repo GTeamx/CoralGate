@@ -1,3 +1,11 @@
+/*
+*
+* This code was written by Gemini 3.1 Pro and cleaned up by a human.
+* GTeam does not claim ownership of this code.
+*
+* Yeah I was too lazy to write it all...
+*
+ */
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -24,46 +32,52 @@ public class Main {
 
         final long startTime = System.currentTimeMillis();
 
-        System.out.println("Starting CoralGate filter tester v1.0.0");
+        System.out.println("Starting CoralGate filter tester v1.1.0");
 
         // Broken handshake.
         System.out.print(" (1) Broken handshake: ");
         runTest(50000, "STATUS", out -> {
-            sendHandshake(out, 1);
+            sendHandshake(out, 1, PROTOCOL_VERSION);
             sendStatusRequest(out);
         });
 
-
         // Bot username.
         System.out.print(" (2) Bot username: ");
-        runTest(50002, "LOGIN", out -> {
-            sendHandshake(out, 2);
+        runTest(50001, "LOGIN", out -> {
+            sendHandshake(out, 2, PROTOCOL_VERSION);
             sendLoginStart(out, "Player12345");
         });
 
         // Suspicious port.
         System.out.print(" (3) Suspicious port: ");
         runTest(40000, "STATUS", out -> {
-            sendHandshake(out, 1);
+            sendHandshake(out, 1, PROTOCOL_VERSION);
             sendStatusRequest(out);
         });
 
         // Invalid port.
         System.out.print(" (4) Invalid port: ");
         runTest(30000, "STATUS", out -> {
-            sendHandshake(out, 1);
+            sendHandshake(out, 1, PROTOCOL_VERSION);
             sendStatusRequest(out);
         });
 
         // Skip handshake.
-        System.out.print(" (5) Skip handshake: ");
-        runTest(50001, "LOGIN", out -> sendLoginStart(out, "CoralGate"));
+        System.out.print(" (5) Jump packet: ");
+        runTest(65535, "LOGIN", out -> sendLoginStart(out, "CoralGate"));
+
+        // Invalid protocol.
+        System.out.print(" (6) Invalid protocol: ");
+        runTest(50003, "STATUS", out -> {
+            sendHandshake(out, 1, 100);
+            sendStatusRequest(out);
+        });
 
         System.out.println("Scan finished in " + (System.currentTimeMillis() - startTime) + "ms.");
 
     }
 
-    private static void runTest(final int sourcePort, final String expectedState, final PacketSender sender) {
+    private static void runTest(final int sourcePort, final String expectedState, final PacketSender packetSender) {
 
         try (final Socket socket = new Socket()) {
 
@@ -71,11 +85,11 @@ public class Main {
             socket.bind(new InetSocketAddress(sourcePort));
             socket.connect(new InetSocketAddress(TARGET_IP, TARGET_PORT), 3000);
 
-            DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-            DataInputStream in = new DataInputStream(socket.getInputStream());
+            final DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
+            final DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
 
-            sender.send(out);
-            parseServerResponse(in, expectedState);
+            packetSender.send(dataOutputStream);
+            parseServerResponse(dataInputStream, expectedState);
 
         } catch (final BindException e) {
             System.out.println(RED + "(!) Cannot bind to port " + sourcePort + ". Socket still locked by OS allocation." + RESET);
@@ -163,14 +177,14 @@ public class Main {
         void send(final DataOutputStream dataOutputStream) throws IOException;
     }
 
-    private static void sendHandshake(final DataOutputStream dataOutputStream, final int nextState) throws IOException {
+    private static void sendHandshake(final DataOutputStream dataOutputStream, final int nextState, final int protocolVersion) throws IOException {
 
         final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         final DataOutputStream handshakeOutputStream = new DataOutputStream(byteArrayOutputStream);
 
         handshakeOutputStream.writeByte(0x00);
 
-        writeVarInt(handshakeOutputStream, PROTOCOL_VERSION);
+        writeVarInt(handshakeOutputStream, protocolVersion);
         writeString(handshakeOutputStream, Main.TARGET_IP);
 
         handshakeOutputStream.writeShort(Main.TARGET_PORT);
