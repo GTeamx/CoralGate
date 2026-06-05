@@ -25,7 +25,6 @@ import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.Dsl;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
@@ -41,8 +40,8 @@ public class UpdateChecker {
         this.corePlugin = corePlugin;
         this.jankson = Jankson.builder().build();
         this.httpClient = Dsl.asyncHttpClient(Dsl.config()
-                .setConnectTimeout(Duration.ofMillis(3000))
-                .setRequestTimeout(Duration.ofMillis(3000))
+                .setConnectTimeout(3000)
+                .setRequestTimeout(3000)
                 .build());
     }
 
