@@ -20,7 +20,6 @@ package cloud.gteam.coralgate;
 
 import cloud.gteam.coralgate.api.APIManager;
 import cloud.gteam.coralgate.config.ConfigManager;
-import cloud.gteam.coralgate.config.ConfigModel;
 import cloud.gteam.coralgate.update.UpdateChecker;
 import cloud.gteam.coralgate.utils.ConfigUtils;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -33,6 +32,8 @@ import java.util.logging.Logger;
 public final class CorePlugin {
 
     private static Logger logger;
+
+    private boolean testMode;
 
     private boolean onlineMode;
     private int compressionThreshold;
@@ -60,6 +61,8 @@ public final class CorePlugin {
         if (!peCoreVersion.equals(peServerVersion)) {
             logger.warning("packetevents version mismatch! You are using version '" + peServerVersion + "' but core module uses '" + peCoreVersion + "'! You may experience issues or bugs. Update CoralGate and packetevents to fix this issue.");
         } else logger.info("Using packetevents version '" + peCoreVersion + "'...");
+
+        this.testMode = new File(dataFolder, "test.mode").exists();
 
         this.configManager = new ConfigManager(dataFolder, "config.yml");
         this.configManager.load();
@@ -125,6 +128,10 @@ public final class CorePlugin {
 
     public static Logger getLogger() {
         return logger;
+    }
+
+    public boolean isTestMode() {
+        return this.testMode;
     }
 
     public boolean isOnlineMode() {
