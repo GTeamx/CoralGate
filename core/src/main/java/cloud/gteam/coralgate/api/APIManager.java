@@ -29,7 +29,6 @@ import org.asynchttpclient.Response;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -51,9 +50,9 @@ public class APIManager {
         this.corePlugin = corePlugin;
         this.cacheTime = TimeUnit.MINUTES.toMillis(this.corePlugin.getConfigManager().getConfig().getApiCacheTime());
         this.httpClient = Dsl.asyncHttpClient(Dsl.config()
-                .setConnectTimeout(Duration.ofMillis(3000))
-                .setRequestTimeout(Duration.ofMillis(3000))
-                .setReadTimeout(Duration.ofMillis(3000))
+                .setConnectTimeout(3000)
+                .setRequestTimeout(3000)
+                .setReadTimeout(3000)
                 .build());
         this.baseUrl = this.corePlugin.getConfigManager().getConfig().getApiHost() + this.corePlugin.getConfigManager().getConfig().getApiVersion() + "/";
         this.jankson = Jankson.builder().build();
