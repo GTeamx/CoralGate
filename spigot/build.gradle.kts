@@ -7,6 +7,10 @@ plugins {
 
 java {
 
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(8))
+    }
+
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
 
@@ -63,7 +67,7 @@ tasks.processResources {
             "name" to project.name,
             "version" to project.version,
             "coreVersion" to coreVersion,
-            "packetEventsVersion" to packetEventsVersion
+            "packeteventsVersion" to packetEventsVersion
         )
 
     }
