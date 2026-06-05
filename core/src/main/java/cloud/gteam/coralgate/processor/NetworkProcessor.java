@@ -181,6 +181,31 @@ public class NetworkProcessor implements PacketListener {
         }
 
         /*
+        * PROTOCOL FILTERING.
+         */
+
+        if (isStatusPacket || isLoginSequencePacket) {
+
+            // Exempt for local scanner test.
+            final boolean scannerTest = inetSocketAddress.getHostString().equals("127.0.0.1") && inetSocketAddress.getPort() == 65535 && this.corePlugin.isTestMode();
+            if (!scannerTest) {
+
+                // If the client's protocol version is invalid.
+                if (packetReceiveEvent.getUser().getClientVersion() == null || packetReceiveEvent.getUser().getClientVersion().getProtocolVersion() == -1) {
+
+                    // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+                    logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Invalid protocol version.");
+
+                    // Block further logic.
+                    return;
+
+                }
+
+            }
+
+        }
+
+        /*
         * PACKET ORDER FILTERING.
         */
 
