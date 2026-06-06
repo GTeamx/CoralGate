@@ -60,7 +60,7 @@ public class CoralGateCommand {
         actor.sendRawMessage(" - /coralgate§8|cg§r config§8|cfg§r reload§8|rl§r §7- Reload the config.");
         actor.sendRawMessage("");
         actor.sendRawMessage("§bHaving troubles ? Need help ? Found a bug ?");
-        actor.sendRawMessage("§7Join our Discord: §bhttps://discord.gg/rxV89DZHEd");
+        actor.sendRawMessage("§7Join our Discord: §bhttps://discord.gteam.cloud");
         actor.sendRawMessage("");
         actor.sendRawMessage("§7-----------------------------------------------------");
 
@@ -86,10 +86,14 @@ public class CoralGateCommand {
         actor.sendRawMessage("");
         actor.sendRawMessage("§7Core version: " + (Objects.equals(this.corePlugin.getUpdateChecker().getLatestVersion(), currentVersion) ? "§a" : "§e") + this.corePlugin.getPlatformProperties().getProperty("core-version"));
         actor.sendRawMessage("");
-        actor.sendRawMessage("§7Configuration version: §f" + config.getConfigVersion());
+        actor.sendRawMessage("§7Configuration version: §f" + (Objects.equals(this.corePlugin.getConfigManager().getLatestConfigVersion(), config.getConfigVersion()) ? "§a" : "§e") + config.getConfigVersion());
         actor.sendRawMessage("");
-        actor.sendRawMessage("§7API host: §f" + config.getApiHost());
-        actor.sendRawMessage("§7API version: §f" + config.getApiVersion());
+        if (config.isAllowApiUsage()) {
+            actor.sendRawMessage("§7API host: §f" + config.getApiHost());
+            actor.sendRawMessage("§7API version: §f" + config.getApiVersion());
+        } else {
+            actor.sendRawMessage("§7API usage is disabled.");
+        }
         actor.sendRawMessage("");
         actor.sendRawMessage("§7packetevents version: " + (PacketEvents.getAPI().getVersion().toString().equals(this.corePlugin.getPlatformProperties().getProperty("packetevents-version")) ? "§a" : "§e") + this.corePlugin.getPlatformProperties().getProperty("packetevents-version"));
         actor.sendRawMessage("");
@@ -109,7 +113,7 @@ public class CoralGateCommand {
         actor.sendRawMessage(config.getNormalPrefix() + "Reloading configuration file...");
 
         // Get latest config version.
-        final String latestConfigVersion = new ConfigModel().getConfigVersion();
+        final String latestConfigVersion = this.corePlugin.getConfigManager().getLatestConfigVersion();
 
         configManager.load();
         // Update config with latest load.
