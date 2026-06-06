@@ -11,6 +11,7 @@
 
   <a href="">![GitHub Release](https://img.shields.io/github/v/release/GTeamX/CoralGate?sort=date&display_name=tag&style=for-the-badge&label=Latest%20Release&color=55FFFF)</a>
   <a href="">![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/GTeamX/CoralGate/latest/total?sort=date&style=for-the-badge&label=Latest%20Downloads)</a>
+  <br>
   <a href="">![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/GTeamX/CoralGate/total?style=for-the-badge&label=Total%20Downloads)</a>
   <a href="">![GitHub License](https://img.shields.io/github/license/GTeamX/CoralGate?style=for-the-badge)</a>
   <br>
@@ -49,16 +50,23 @@ If you wish to get support, test or have any questions about CoralGate, make sur
       <th align="center">1.11</th>
       <th align="center">1.11.x</th>
       <th align="center">1.12</th>
-      <th align="center">1.12.x</th>
+      <th align="center">1.12.1</th>
+      <th align="center">1.12.2</th>
       <th align="center">1.13</th>
-      <th align="center">1.13.x</th>
+      <th align="center">1.13.1</th>
+      <th align="center">1.13.2</th>
       <th align="center">1.14</th>
-      <th align="center">1.14.x</th>
+      <th align="center">1.14.1</th>
+      <th align="center">1.14.2</th>
+      <th align="center">1.14.3</th>
+      <th align="center">1.14.4</th>
       <th align="center">1.15</th>
-      <th align="center">1.15.x</th>
+      <th align="center">1.15.1</th>
+      <th align="center">1.15.2</th>
       <th align="center">1.16</th>
       <th align="center">1.16.1</th>
       <th align="center">1.16.2</th>
+      <th align="center">1.16.3</th>
       <th align="center">1.16.4/5</th>
       <th align="center">1.17</th>
       <th align="center">1.17.1</th>
@@ -68,8 +76,7 @@ If you wish to get support, test or have any questions about CoralGate, make sur
       <th align="center">1.19.1/2</th>
       <th align="center">1.19.3</th>
       <th align="center">1.19.4</th>
-      <th align="center">1.20</th>
-      <th align="center">1.20.1</th>
+      <th align="center">1.20/.1</th>
       <th align="center">1.20.2</th>
       <th align="center">1.20.3/4</th>
       <th align="center">1.20.5/6</th>
@@ -77,7 +84,10 @@ If you wish to get support, test or have any questions about CoralGate, make sur
       <th align="center">1.21.2/3</th>
       <th align="center">1.21.4</th>
       <th align="center">1.21.5</th>
-      <th align="center">1.21.8</th>
+      <th align="center">1.21.6</th>
+      <th align="center">1.21.7/8</th>
+      <th align="center">1.21.9/10</th>
+      <th align="center">1.21.11</th>
       <th align="center">26.1.x</th>
       <th align="center">&gt;&nbsp;26.1.2</th>
     </tr>
@@ -102,7 +112,14 @@ If you wish to get support, test or have any questions about CoralGate, make sur
       <td align="center">✅</td>
       <td align="center">✅</td>
       <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
       <td align="center" colspan="2">✅</td>
+      <td align="center">✅</td>
       <td align="center">✅</td>
       <td align="center">✅</td>
       <td align="center" colspan="2">❓</td>
@@ -112,12 +129,15 @@ If you wish to get support, test or have any questions about CoralGate, make sur
       <td align="center">✅</td>
       <td align="center">❌</td>
       <td align="center">✅</td>
-      <td align="center" colspan="2">✅</td>
+      <td align="center">✅</td>
       <td align="center">❌</td>
       <td align="center">✅</td>
       <td align="center">✅</td>
       <td align="center">✅</td>
       <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">❓</td>
       <td align="center">✅</td>
       <td align="center">✅</td>
       <td align="center">✅</td>
@@ -189,7 +209,7 @@ Every default value is marked in the comments above the field with explanation o
 
 If you ever mess up your configuration file, delete it and restart your server. The default configuration will be loaded.
 
-If you recently updated CoralGate and get a warning saying your configuration file is outdated, either use the command /coralgate cfg update, this will try to keep your active configuration and add the missing configuration parts OR delete your configuration file and let the new default configuration appear.
+If you recently updated CoralGate and get a warning saying your configuration file is outdated, delete your configuration file and let the new default configuration appear. To ensure you loose none of your settings, we advise you make a backup of your config.yml file beforehand.
 
 ## 🔔 Releases
 
@@ -197,7 +217,7 @@ CoralGate has a built-in update checker, however it will not automatically insta
 To prevent any malware from infecting your server, only download CoralGate from our **trusted sources**:
 - [Official GitHub](https://github.com/GTeamx/CoralGate/releases)
 
-Feel free to compile CoralGate yourself, however note that doing so will prevent you from getting support. If you want features or fixes to be added to CoralGate, please follow the [Issues/Feature request](https://github.com/GTeamx/CoralGate?tab=readme-ov-file#-issuesfeature-request) section.
+Feel free to compile CoralGate yourself, however note that using a build from the dev branch will prevent you from getting support. If you want features or fixes to be added to CoralGate, please follow the [Issues/Feature request](https://github.com/GTeamx/CoralGate?tab=readme-ov-file#-issuesfeature-request) section.
 
 ## 🚧 API
 
@@ -235,7 +255,7 @@ Provide the impacted ip address(es) and further explanation on the usage behind 
 - Server finders/scanners (shodan, OpenHeimer...)
 ....
 
-*Some service are exempt from these rules, such as:*
+*Some services are exempt from these rules, such as:*
 - Voting sites
 - Server lists
 
