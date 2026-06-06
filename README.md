@@ -36,9 +36,11 @@ If you wish to get support, test or have any questions about CoralGate, make sur
 <table>
   <thead>
     <tr>
-      <th align="left">Platform</th>
+      <th align="left"></th>
       <th align="center">&lt;&nbsp;1.8</th>
-      <th align="center">1.8.x</th>
+      <th align="center">1.8</th>
+      <th align="center">1.8.3</th>
+      <th align="center">1.8.8</th>
       <th align="center">1.9</th>
       <th align="center">1.9.1</th>
       <th align="center">1.9.2</th>
@@ -74,16 +76,51 @@ If you wish to get support, test or have any questions about CoralGate, make sur
       <th align="center">1.21/.1</th>
       <th align="center">1.21.2/3</th>
       <th align="center">1.21.4</th>
-      <th align="center">26.1/2</th>
+      <th align="center">1.21.5</th>
+      <th align="center">1.21.8</th>
+      <th align="center">26.1.x</th>
       <th align="center">&gt;&nbsp;26.1.2</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td><b>Spigot</b></td>
+      <td align="center" colspan="2">❌</td>
+      <td align="center">⚠️</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center" colspan="2">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center" colspan="2">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center" colspan="2">❓</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
       <td align="center">❌</td>
       <td align="center">✅</td>
-      <td align="center" colspan="35">❓</td>
+      <td align="center" colspan="2">✅</td>
+      <td align="center">❌</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
       <td align="center">✅</td>
       <td align="center">❓</td>
     </tr>
@@ -91,35 +128,35 @@ If you wish to get support, test or have any questions about CoralGate, make sur
       <td><b>Paper</b></td>
       <td align="center">❌</td>
       <td align="center">✅</td>
-      <td align="center" colspan="35">❓</td>
+      <td align="center" colspan="37">❓</td>
       <td align="center">✅</td>
       <td align="center">❓</td>
     </tr>
     <tr>
       <td><b>BungeeCord</b></td>
       <td align="center">❌</td>
-      <td align="center" colspan="38">❓</td>
+      <td align="center" colspan="40">❓</td>
     </tr>
     <tr>
       <td><b>Velocity</b></td>
       <td align="center">❌</td>
-      <td align="center" colspan="38">❓</td>
+      <td align="center" colspan="40">❓</td>
     </tr>
     <tr>
       <td><b>Sponge</b></td>
-      <td align="center" colspan="39">❌</td>
+      <td align="center" colspan="41">❌</td>
     </tr>
     <tr>
       <td><b>Fabric</b></td>
-      <td align="center" colspan="39">❌</td>
+      <td align="center" colspan="41">❌</td>
     </tr>
     <tr>
       <td><b>Forge</b></td>
-      <td align="center" colspan="39">❌</td>
+      <td align="center" colspan="41">❌</td>
     </tr>
     <tr>
       <td><b>NeoForge</b></td>
-      <td align="center" colspan="39">❌</td>
+      <td align="center" colspan="41">❌</td>
     </tr>
   </tbody>
 </table>
