@@ -2,4 +2,4 @@ name: CoralGate
 main: cloud.gteam.coralgate.BungeePlugin
 version: "${version}"
 author: XIII-MC, Vagdedes2
-description: A simple plugin to prevent server scanners from reaching your server.
+description: On-the-fly packet inspection and real-time IP verification for Minecraft servers and networks.
