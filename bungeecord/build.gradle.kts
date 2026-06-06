@@ -24,6 +24,9 @@ repositories {
     // PacketEvents repository.
     maven("https://repo.codemc.io/repository/maven-releases/")
 
+    // BungeeCord repository.
+    maven("https://hub.spigotmc.org/nexus/content/repositories/releases/")
+
 }
 
 dependencies {
@@ -38,8 +41,8 @@ dependencies {
     implementation("io.github.revxrsal:lamp.common:$lampVersion")
     implementation("io.github.revxrsal:lamp.bungee:$lampVersion")
 
-    compileOnly("com.github.retrooper:packetevents-spigot:$packetEventsVersion")
-    compileOnly("net.md-5:bungeecord-api:1.21-R0.4")
+    compileOnly("com.github.retrooper:packetevents-bungeecord:$packetEventsVersion")
+    compileOnly("net.md-5:bungeecord-api:1.16-R0.4")
 
     // Core implementation.
     implementation(project(path = ":core", configuration = "shadow"))
@@ -81,7 +84,7 @@ tasks.shadowJar {
     archiveClassifier.set("")
 
     // Relocate bStats.
-    relocate("org.bstats", "coralgate.libs.bstats")
+    relocate("org.bstats", "cloud.gteam.coralgate.libs.bstats")
 
     exclude("META-INF/*.SF")
     exclude("META-INF/*.DSA")
