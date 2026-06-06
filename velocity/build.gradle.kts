@@ -42,7 +42,7 @@ dependencies {
     implementation("io.github.revxrsal:lamp.velocity:$lampVersion")
     implementation("io.github.revxrsal:lamp.brigadier:$lampVersion")
 
-    compileOnly("com.github.retrooper:packetevents-spigot:$packetEventsVersion")
+    compileOnly("com.github.retrooper:packetevents-velocity:$packetEventsVersion")
     compileOnly("com.velocitypowered:velocity-api:3.4.0")
 
     // Core implementation.
@@ -85,7 +85,7 @@ tasks.shadowJar {
     archiveClassifier.set("")
 
     // Relocate bStats.
-    relocate("org.bstats", "coralgate.libs.bstats")
+    relocate("org.bstats", "cloud.gteam.coralgate.libs.bstats")
 
     exclude("META-INF/*.SF")
     exclude("META-INF/*.DSA")
