@@ -64,7 +64,7 @@ tasks.shadowJar {
 
     archiveClassifier.set("") // produce core.jar instead of core-all.jar
 
-    relocate("dev.dejvokep.boostedyaml", "coralgate.libs.boostedyaml")
+    relocate("dev.dejvokep.boostedyaml", "cloud.gteam.coralgate.libs.boostedyaml")
 
 }
 
