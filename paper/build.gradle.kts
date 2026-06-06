@@ -8,11 +8,11 @@ plugins {
 java {
 
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+        languageVersion.set(JavaLanguageVersion.of(8))
     }
 
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
 
 }
 
@@ -24,8 +24,8 @@ repositories {
     // PacketEvents repository.
     maven("https://repo.codemc.io/repository/maven-releases/")
 
-    // Paper repository.
-    maven("https://repo.papermc.io/repository/maven-public/")
+    // Legacy Paper repository.
+    maven("https://repo.papermc.io/repository/maven-snapshots/")
 
 }
 
@@ -42,7 +42,7 @@ dependencies {
     implementation("io.github.revxrsal:lamp.bukkit:$lampVersion")
 
     compileOnly("com.github.retrooper:packetevents-spigot:$packetEventsVersion")
-    compileOnly("io.papermc.paper:paper-api:1.20-R0.1-SNAPSHOT")
+    compileOnly("org.github.paperspigot:paperspigot-api:1.8.8-R0.1-SNAPSHOT")
 
     // Core implementation.
     implementation(project(":core"))
@@ -56,7 +56,7 @@ tasks.processResources {
     val coreVersion: String by rootProject.extra
 
     // Replace plugin.yml
-    filesMatching("paper-plugin.yml") {
+    filesMatching("plugin.yml") {
         expand("version" to project.version)
     }
 
@@ -83,8 +83,11 @@ tasks.shadowJar {
     archiveVersion.set(project.version.toString())
     archiveClassifier.set("")
 
+    // Relocate Netty for AsyncHTTPClient.
+    relocate("io.netty", "cloud.gteam.coralgate.libs.netty")
+
     // Relocate bStats.
-    relocate("org.bstats", "coralgate.libs.bstats")
+    relocate("org.bstats", "cloud.gteam.coralgate.libs.bstats")
 
     exclude("META-INF/*.SF")
     exclude("META-INF/*.DSA")
