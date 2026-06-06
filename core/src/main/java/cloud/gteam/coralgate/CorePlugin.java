@@ -75,23 +75,27 @@ public final class CorePlugin {
 
         logger.info("Using configuration file version '" + this.configManager.getConfig().getConfigVersion() + "'.");
 
-        this.apiManager = new APIManager(this);
+        if (this.configManager.getConfig().isAllowApiUsage()) {
 
-        logger.info("Loading API version '" + this.getConfigManager().getConfig().getApiVersion() + "', implemented against host '" + this.getConfigManager().getConfig().getApiHost() + "'...");
+            this.apiManager = new APIManager(this);
 
-        if (this.configManager.getConfig().isApiHealthCheck()) {
+            logger.info("Loading API version '" + this.getConfigManager().getConfig().getApiVersion() + "', implemented against host '" + this.getConfigManager().getConfig().getApiHost() + "'...");
 
-            this.apiManager.checkHealth().thenAccept(isHealthy -> {
+            if (this.configManager.getConfig().isApiHealthCheck()) {
 
-                if (isHealthy) {
-                    CorePlugin.getLogger().info("API connection is healthy!");
-                } else {
-                    CorePlugin.getLogger().warning("API returned unhealthy status. Is it down ? No error to display.");
-                }
+                this.apiManager.checkHealth().thenAccept(isHealthy -> {
 
-            });
+                    if (isHealthy) {
+                        CorePlugin.getLogger().info("API connection is healthy!");
+                    } else {
+                        CorePlugin.getLogger().warning("API returned unhealthy status. Is it down ? No error to display.");
+                    }
 
-        } else logger.info("API health check skipped.");
+                });
+
+            } else logger.info("API health check skipped.");
+
+        } else logger.info("API loading skipped (disabled by config).");
 
         this.onlineMode = onlineMode;
 
