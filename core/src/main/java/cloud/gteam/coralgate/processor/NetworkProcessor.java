@@ -59,19 +59,11 @@ public class NetworkProcessor implements PacketListener {
         * SOURCE PORT FILTERING.
         */
 
+        /* Check different condition to trigger a MOTD packet check and blockage. */
+
         // This is the lowest dynamic port used by Linux.
         // Anything bellow means the port was forced to use that port and is therefore, not a real Minecraft client.
-        if (inetSocketAddress.getPort() < 32768) {
-
-            // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-            logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Invalid port used by client.");
-
-            // Block further logic.
-            return;
-
-        }
-
-        /* Check different condition to trigger a MOTD packet check and blockage. */
+        final boolean invalidPort = inetSocketAddress.getPort() < 32768;
 
         // Match MOTD related packets.
         final boolean isStatusPacket = packetTypeCommon == PacketType.Status.Client.PING
@@ -97,7 +89,8 @@ public class NetworkProcessor implements PacketListener {
             if (suspiciousPort) {
 
                 // Log this suspicious connection.
-                CorePlugin.getLogger().warning("Suspicious port used by client. Keep an eye out for " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + "]");
+                if (!invalidPort) CorePlugin.getLogger().warning("Suspicious port used by client. Keep an eye out for " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + "]");
+                else CorePlugin.getLogger().severe("Invalid port used by client. Closing connection from " + inetSocketAddress + ". [C->S | " + packetTypeCommon.getName() + "]");
 
                 // Report the IP to CoralGate API.
                 this.corePlugin.getApiManager().reportIp(ipAddress);
@@ -149,6 +142,17 @@ public class NetworkProcessor implements PacketListener {
                 }
 
             }
+
+        }
+
+        // Ran last so forged MOTD can be sent. This effectively only blocks actual connection packets.
+        if (invalidPort) {
+
+            // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+            logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Invalid port used by client.");
+
+            // Block further logic.
+            return;
 
         }
 
@@ -214,8 +218,11 @@ public class NetworkProcessor implements PacketListener {
 
             final WrapperHandshakingClientHandshake wrapperHandshakingClientHandshake = new WrapperHandshakingClientHandshake(packetReceiveEvent);
 
-            if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.LOGIN && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.LOGIN)
+            if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.LOGIN && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.LOGIN) {
+
                 this.connectionState.put(inetSocketAddress, packetTypeCommon);
+
+            }
 
             // Block further logic.
             return;
