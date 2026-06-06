@@ -84,10 +84,10 @@ tasks.shadowJar {
     archiveClassifier.set("")
 
     // Relocate bStats.
-    relocate("org.bstats", "coralgate.libs.bstats")
+    relocate("org.bstats", "cloud.gteam.coralgate.libs.bstats")
 
     // Relocate netty.
-    relocate("io.netty", "coralgate.libs.netty")
+    relocate("io.netty", "cloud.gteam.coralgate.libs.netty")
 
     exclude("META-INF/*.SF")
     exclude("META-INF/*.DSA")
