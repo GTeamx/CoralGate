@@ -114,7 +114,7 @@ public final class CorePlugin {
             if (upToDate) {
                 CorePlugin.getLogger().info("CoralGate is up to date!");
             } else {
-                CorePlugin.getLogger().warning("You are behind updates on CoralGate! Latest version is '" + this.updateChecker.getLatestVersion() + "'. You are on '" + (this.platformProperties.getProperty("core-version") + "_" + this.platformProperties.getProperty("platform-version")) + "'.");
+                CorePlugin.getLogger().warning("You are behind updates on CoralGate! Latest version is '" + this.updateChecker.getLatestVersion() + "'. You are on '" + this.platformProperties.getProperty("platform-version") + "'.");
             }
 
         });
