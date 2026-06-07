@@ -47,10 +47,10 @@ public class UpdateChecker {
 
     public CompletableFuture<Boolean> isUpToDate() {
 
-        final String fullVersion = this.corePlugin.getPlatformProperties().getProperty("core-version") + "_" + this.corePlugin.getPlatformProperties().getProperty("platform-version");
+        final String currentVersion = this.corePlugin.getPlatformProperties().getProperty("platform-version");
 
         return this.httpClient.prepareGet("https://api.github.com/repos/GTeamX/CoralGate/releases/latest")
-                .setHeader("User-Agent", "CoralGate-UpdateChecker/" + fullVersion)
+                .setHeader("User-Agent", "CoralGate-UpdateChecker/" + currentVersion)
                 .setHeader("Accept", "application/vnd.github+json")
                 .execute()
                 .toCompletableFuture()
@@ -67,7 +67,7 @@ public class UpdateChecker {
 
                         this.latestVersion = Objects.requireNonNull(json.get("tag_name")).toJson(false, false).replace("\"", "");
 
-                        return this.latestVersion.equalsIgnoreCase(fullVersion);
+                        return this.latestVersion.equalsIgnoreCase(currentVersion);
 
                     } catch (final Exception e) {
 
