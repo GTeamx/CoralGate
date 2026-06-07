@@ -125,7 +125,7 @@ If you wish to get support, test or have any questions about CoralGate, make sur
       <td align="center">✅</td>
       <td align="center">✅</td>
       <td align="center">✅</td>
-      <td align="center" colspan="2">❓</td>
+      <td align="center" colspan="2">❌</td>
       <td align="center">✅</td>
       <td align="center">✅</td>
       <td align="center">✅</td>
@@ -202,28 +202,28 @@ If you wish to get support, test or have any questions about CoralGate, make sur
     <tr>
       <td><b>BungeeCord</b></td>
       <td align="center">❌</td>
-      <td align="center" colspan="51">❓</td>
+      <td align="center" colspan="52">❓</td>
     </tr>
     <tr>
       <td><b>Velocity</b></td>
       <td align="center">❌</td>
-      <td align="center" colspan="51">❓</td>
+      <td align="center" colspan="52">❓</td>
     </tr>
     <tr>
       <td><b>Sponge</b></td>
-      <td align="center" colspan="52">❌</td>
+      <td align="center" colspan="53">❌</td>
     </tr>
     <tr>
       <td><b>Fabric</b></td>
-      <td align="center" colspan="52">❌</td>
+      <td align="center" colspan="53">❌</td>
     </tr>
     <tr>
       <td><b>Forge</b></td>
-      <td align="center" colspan="52">❌</td>
+      <td align="center" colspan="53">❌</td>
     </tr>
     <tr>
       <td><b>NeoForge</b></td>
-      <td align="center" colspan="52">❌</td>
+      <td align="center" colspan="53">❌</td>
     </tr>
   </tbody>
 </table>
@@ -245,6 +245,7 @@ If you wish to get support, test or have any questions about CoralGate, make sur
 - Only 1.11.2 build exists.
 - Only 1.12.2 build works (S3 bucket unreachable for 1.12/.1).
 - Only 1.16.x build exists.
+- Only 1.18.x build exists.
 - 1.19.3 throws java.lang.RuntimeException: The received byte array length is longer than maximum allowed (8742 > 512) for LOGIN_START wrapper.
 - 1.20.2 client sends PLUGIN_MESSAGE and CLIENT_SETTINGS after HANDSHAKE
 </details>
