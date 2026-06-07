@@ -1,6 +1,6 @@
 /*
  * This file is part of CoralGate - https://github.com/GTeamX/CoralGate
- * Copyright (C) 2025 GTeamX (GTeam) and it's contributors
+ * Copyright (C) 2026 GTeamX (GTeam) and it's contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,38 +18,76 @@
 
 package cloud.gteam.coralgate;
 
+import cloud.gteam.coralgate.commands.CoralGateCommand;
+import cloud.gteam.coralgate.commands.VelocityPermissionChecker;
+import cloud.gteam.coralgate.commands.permissions.PermissionFactory;
 import cloud.gteam.coralgate.processor.NetworkProcessor;
 import cloud.gteam.coralgate.utils.ConfigUtils;
+import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
+import com.google.inject.Inject;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
+import com.velocitypowered.api.plugin.annotation.DataDirectory;
+import com.velocitypowered.api.proxy.ProxyServer;
+import org.bstats.velocity.Metrics;
+import revxrsal.commands.Lamp;
+import revxrsal.commands.velocity.VelocityLamp;
+import revxrsal.commands.velocity.actor.VelocityCommandActor;
+
+import java.nio.file.Path;
+import java.util.logging.Logger;
 
 public final class VelocityPlugin {
 
-    private final PluginCore pluginCore = new PluginCore();
+    private final Metrics.Factory metricsFactory;
+
+    private final Path dataDirectory;
+
+    @Inject
+    public VelocityPlugin(final ProxyServer server, final @DataDirectory Path dataDirectory, final Metrics.Factory metricsFactory) {
+
+        this.dataDirectory = dataDirectory;
+
+        // Load commands.
+        final Lamp<VelocityCommandActor> lamp = VelocityLamp.builder(this, server)
+                .permissionFactory(new PermissionFactory(new VelocityPermissionChecker()))
+                .build();
+        lamp.register(new CoralGateCommand(this.corePlugin));
+
+        // Load bStats metrics factory.
+        this.metricsFactory = metricsFactory;
+
+    }
+
+    private final CorePlugin corePlugin = new CorePlugin();
 
     @Subscribe
     public void onProxyInitialization(final ProxyInitializeEvent proxyInitializeEvent) {
 
-        // onLoad equivalent
-        PacketEvents.getAPI().getEventManager().registerListener(
-                new NetworkProcessor(getPluginCore()), PacketListenerPriority.HIGHEST);
+        // Start bStats.
+        this.metricsFactory.make(this, 29439);
 
-        this.pluginCore.onEnable(ConfigUtils.isOnlineMode("velocity.toml"), "velocity.toml");
+        // onLoad equivalent.
+        PacketEvents.getAPI().getEventManager().registerListener(
+                new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
+
+        // Load core.
+        this.corePlugin.onEnable(Logger.getLogger("CoralGate"), this.dataDirectory.toFile(), ConfigUtils.isOnlineMode("velocity.toml"), "velocity.toml", PlatformUtils.loadProperties(this.getClass()));
 
     }
 
     @Subscribe
     public void onProxyShutdown(final ProxyShutdownEvent proxyShutdownEvent) {
 
-        // Plugin shutdown logic
+        this.corePlugin.onDisable();
 
     }
 
-    public PluginCore getPluginCore() {
-        return this.pluginCore;
+    public CorePlugin getCorePlugin() {
+        return this.corePlugin;
     }
 
 }

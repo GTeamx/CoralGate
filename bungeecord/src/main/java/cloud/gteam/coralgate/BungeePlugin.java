@@ -1,6 +1,6 @@
 /*
  * This file is part of CoralGate - https://github.com/GTeamX/CoralGate
- * Copyright (C) 2025 GTeamX (GTeam) and it's contributors
+ * Copyright (C) 2026 GTeamX (GTeam) and it's contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,49 +18,55 @@
 
 package cloud.gteam.coralgate;
 
+import cloud.gteam.coralgate.commands.BungeePermissionChecker;
+import cloud.gteam.coralgate.commands.CoralGateCommand;
+import cloud.gteam.coralgate.commands.permissions.PermissionFactory;
 import cloud.gteam.coralgate.processor.NetworkProcessor;
+import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
-import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.plugin.Plugin;
+import org.bstats.bungeecord.Metrics;
+import revxrsal.commands.Lamp;
+import revxrsal.commands.bungee.BungeeLamp;
+import revxrsal.commands.bungee.actor.BungeeCommandActor;
 
 public final class BungeePlugin extends Plugin {
 
-    private final PluginCore pluginCore = new PluginCore();
-    private boolean canRun = false;
+    private final CorePlugin corePlugin = new CorePlugin();
 
     @Override
     public void onLoad() {
-
-        // Check if PacketEvents (code name: 'packetevents) is installed
-        if (ProxyServer.getInstance().getPluginManager().getPlugin("packetevents") == null) {
-
-            PluginCore.getLogger().severe("PacketEvents is required to run CoralGate! Please install PacketEvents in your plugins folder.");
-            return;
-
-        } else canRun = true;
-
         PacketEvents.getAPI().getEventManager().registerListener(
-                new NetworkProcessor(getPluginCore()), PacketListenerPriority.HIGHEST);
-
+                new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
     }
 
     @Override
     public void onEnable() {
 
-        if (canRun) this.pluginCore.onEnable(this.getProxy().getConfig().isOnlineMode(), "config.yml");
+        // Start bStats.
+        new Metrics(this, 29439);
+
+        // Load core.
+        this.corePlugin.onEnable(this.getLogger(), getDataFolder(), this.getProxy().getConfig().isOnlineMode(), "config.yml", PlatformUtils.loadProperties(this.getClass()));
+
+        // Load commands.
+        final Lamp<BungeeCommandActor> bukkitCommandActor = BungeeLamp.builder(this)
+                .permissionFactory(new PermissionFactory(new BungeePermissionChecker()))
+                .build();
+        bukkitCommandActor.register(new CoralGateCommand(this.corePlugin));
 
     }
 
     @Override
     public void onDisable() {
 
-        // Plugin shutdown logic
+        this.corePlugin.onDisable();
 
     }
 
-    public PluginCore getPluginCore() {
-        return this.pluginCore;
+    public CorePlugin getCorePlugin() {
+        return this.corePlugin;
     }
 
 }

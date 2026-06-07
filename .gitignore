@@ -5,6 +5,10 @@
 */target
 */dependency-reduced-pom.xml
 */.gradle
+/.gradle
 */build
 */LICENSE.TXT
 */run
+*pom.xml.versionsBackup
+/build/
+/scanner/out/

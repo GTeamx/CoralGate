@@ -1,0 +1,72 @@
+# CoralGate - https://github.com/GTeamX/CoralGate
+# Copyright (C) 2026 GTeamX.
+# Configuration file.
+
+# Quick note:
+# You need to restart your server in order to fully apply changes!
+
+# Config file version. DO NOT CHANGE THIS!
+version: "0.2.0"
+
+# Per category message prefixes.
+prefixes:
+  normal: "§b§lCoralGate §7» §r"  # Prefix used for commands when everything is working.
+  warning: "§6§lCoralGate §7» §r" # Prefix used for commands when a warning occurs.
+  error: "§c§lCoralGate §7» §r"   # Prefix used for commands when an error occurs.
+
+# API and query related settings.
+api-settings:
+
+  # Allow or not the usage of the CoralGate API service.
+  # Not using the API will result in higher chances of bots extracting information out of your server.
+  # We therefore highly recommend you keep this enabled.
+  #
+  # Expected value type: Boolean
+  # Expected value: true
+  allow-usage: true
+
+  # Allow or not the health checking of the API when starting.
+  # Without the health check the API is 'blind', requests could be dropped or never produce any results.
+  # If you are using the official API, keep this enabled.
+  #
+  # Expected value type: Boolean
+  # Expected value: true
+  health-check: true
+
+  # How long the local memory cache holds the IP.
+  # If you have a large amount of requests or prefer having the latest API data, reduce this.
+  # The time is defined in minutes.
+  #
+  # Expected value type: Integer
+  # Expected value: 10
+  cache-time: 10
+
+  # The host server responsible for API queries.
+  # If you own or self-host an API that returns a specific JSON encoded field (which can be changed bellow), feel free to use it.
+  # BEWARE: Putting other servers here might result in your data leaking or server being compromised, keeping the default server is recommended.
+  #
+  # Expected value type: String (URL)
+  # Expected value: "https://api.gteam.cloud/coralgate/"
+  host: "https://api.gteam.cloud/coralgate/"
+
+  # The API version used.
+  # If you want to use newer development or older versions of the API.
+  # Keeping this version to the latest is recommended. If you happen to use other versions, make sure the expected trigger is properly defined.
+  #
+  # Expected value type: String
+  # Expected value: "v2"
+  version: "v2"
+
+  # The field the API sends that contains the blocked status.
+  # If you use special API versions or your own API, you may need to change this. Otherwise, don't.
+  #
+  # Expected value type: String
+  # Expected value: "blocked_status"
+  trigger-field: "blocked_status"
+
+  # The value of the previous field required to declare an IP as blocked.
+  # If you use special API versions or your own API, you may need to change this. Otherwise, don't.
+  #
+  # Expected value type: String
+  # Expected value: "true"
+  trigger-field-value: "true"

@@ -1,8 +1,8 @@
 {
   "id": "coralgate",
   "name": "CoralGate",
-  "version": "0.1.0",
-  "description": "A simple plugin to prevent server scanners from reaching your server.",
+  "version": "${version}",
+  "description": "On-the-fly packet inspection and real-time IP verification for Minecraft servers and networks.",
   "authors": [ "XIII___, Vagdedes2" ],
   "main": "cloud.gteam.coralgate.VelocityPlugin",
   "dependencies": [

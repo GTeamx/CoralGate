@@ -1,9 +1,8 @@
 name: CoralGate
 version: "${version}"
-main: cloud.gteam.coralgate.SpigotPlugin
+main: cloud.gteam.coralgate.PaperPlugin
 prefix: CoralGate
 load: STARTUP
 authors: [ XIII___, Vagdedes2 ]
 description: On-the-fly packet inspection and real-time IP verification for Minecraft servers and networks.
-depend:
-  - packetevents
+depend: [packetevents]

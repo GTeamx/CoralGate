@@ -1,6 +1,6 @@
 /*
  * This file is part of CoralGate - https://github.com/GTeamX/CoralGate
- * Copyright (C) 2025 GTeamX (GTeam) and it's contributors
+ * Copyright (C) 2026 GTeamX (GTeam) and it's contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,37 +18,56 @@
 
 package cloud.gteam.coralgate;
 
+import cloud.gteam.coralgate.commands.CoralGateCommand;
+import cloud.gteam.coralgate.commands.PaperPermissionChecker;
+import cloud.gteam.coralgate.commands.permissions.PermissionFactory;
 import cloud.gteam.coralgate.processor.NetworkProcessor;
+import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerPriority;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
+import revxrsal.commands.Lamp;
+import revxrsal.commands.bukkit.BukkitLamp;
+import revxrsal.commands.bukkit.actor.BukkitCommandActor;
 
 public final class PaperPlugin extends JavaPlugin {
 
-    private final PluginCore pluginCore = new PluginCore();
+    private final CorePlugin corePlugin = new CorePlugin();
 
     @Override
     public void onLoad() {
         PacketEvents.getAPI().getEventManager().registerListener(
-                new NetworkProcessor(getPluginCore()), PacketListenerPriority.HIGHEST);
+                new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
     }
 
     @Override
     public void onEnable() {
 
-        this.pluginCore.onEnable(Bukkit.getOnlineMode(), "server.properties");
+        // Start bStats.
+        new Metrics(this, 29439);
+
+        // Load core.
+        this.corePlugin.onEnable(this.getLogger(), getDataFolder(), Bukkit.getOnlineMode(), "server.properties", PlatformUtils.loadProperties(this.getClass()));
+
+        // Load commands.
+        final Lamp<BukkitCommandActor> bukkitCommandActor = BukkitLamp.builder(this)
+                .permissionFactory(new PermissionFactory(new PaperPermissionChecker()))
+                .build();
+        bukkitCommandActor.register(new CoralGateCommand(this.corePlugin));
 
     }
 
     @Override
     public void onDisable() {
 
-        // Plugin shutdown logic
+        this.corePlugin.onDisable();
 
     }
 
-    public PluginCore getPluginCore() {
-        return this.pluginCore;
+    public CorePlugin getCorePlugin() {
+        return this.corePlugin;
     }
+
 }
