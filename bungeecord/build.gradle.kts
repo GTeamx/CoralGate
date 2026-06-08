@@ -42,7 +42,7 @@ dependencies {
     implementation("io.github.revxrsal:lamp.bungee:$lampVersion")
 
     compileOnly("com.github.retrooper:packetevents-bungeecord:$packetEventsVersion")
-    compileOnly("net.md-5:bungeecord-api:1.16-R0.4")
+    compileOnly("net.md-5:bungeecord-api:1.21-R0.4")
 
     // Core implementation.
     implementation(project(path = ":core", configuration = "shadow"))
