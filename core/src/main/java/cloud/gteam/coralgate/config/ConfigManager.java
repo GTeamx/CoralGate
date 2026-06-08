@@ -95,6 +95,8 @@ public class ConfigManager {
         this.config.setApiTriggerField(this.document.getString("api-settings.trigger-field", "blocked_status"));
         this.config.setApiTriggerFieldValue(this.document.getString("api-settings.trigger-field-value", "true"));
 
+        this.config.setIgnoreLocalAddresses(this.document.getBoolean("filter-settings.ignore-local-addresses", true));
+
     }
 
     public void save() {
