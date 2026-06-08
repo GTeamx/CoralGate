@@ -6,7 +6,7 @@
 # You need to restart your server in order to fully apply changes!
 
 # Config file version. DO NOT CHANGE THIS!
-version: "0.2.0"
+version: "0.2.1"
 
 # Per category message prefixes.
 prefixes:
