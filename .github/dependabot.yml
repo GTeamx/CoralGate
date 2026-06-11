@@ -11,3 +11,10 @@ updates:
       dev-deps:
         patterns:
           - "*"
+    ignore:
+      # Fully ignore bungeecord-api
+      - dependency-name: "net.md-5:bungeecord-api"
+
+      # Only allow 2.x.x updates for async-http-client
+      - dependency-name: "org.asynchttpclient:async-http-client"
+        versions: [">= 3.0.0"]
