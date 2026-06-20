@@ -27,6 +27,9 @@ repositories {
     // Legacy Paper repository.
     maven("https://repo.papermc.io/repository/maven-snapshots/")
 
+    // bungeecord-chat repository.
+    maven("https://hub.spigotmc.org/nexus/content/groups/public/")
+
 }
 
 dependencies {
