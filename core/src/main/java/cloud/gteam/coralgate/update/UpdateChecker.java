@@ -49,6 +49,9 @@ public class UpdateChecker {
 
         final String currentVersion = this.corePlugin.getPlatformProperties().getProperty("platform-version");
 
+        // This is a dev/preview build, assume it's "up to date" to not show an out of date console message.
+        if (currentVersion.endsWith("-SNAPSHOT")) return CompletableFuture.completedFuture(true);
+
         return this.httpClient.prepareGet("https://api.github.com/repos/GTeamX/CoralGate/releases/latest")
                 .setHeader("User-Agent", "CoralGate-UpdateChecker/" + currentVersion)
                 .setHeader("Accept", "application/vnd.github+json")
