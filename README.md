@@ -92,7 +92,8 @@ If you wish to get support, test or have any questions about CoralGate, make sur
       <th align="center">1.21.9/10</th>
       <th align="center">1.21.11</th>
       <th align="center">26.1.x</th>
-      <th align="center">&gt;&nbsp;26.1.2</th>
+      <th align="center">26.2</th>
+      <th align="center">&gt;&nbsp;26.2</th>
     </tr>
   </thead>
   <tbody>
@@ -142,6 +143,7 @@ If you wish to get support, test or have any questions about CoralGate, make sur
       <td align="center">✅</td>
       <td align="center">✅</td>
       <td align="center">❌</td>
+      <td align="center">✅</td>
       <td align="center">✅</td>
       <td align="center">✅</td>
       <td align="center">✅</td>
@@ -197,33 +199,34 @@ If you wish to get support, test or have any questions about CoralGate, make sur
       <td align="center">✅</td>
       <td align="center">✅</td>
       <td align="center">✅</td>
+      <td align="center">✅</td>
       <td align="center">❓</td>
     </tr>
     <tr>
       <td><b>BungeeCord</b></td>
       <td align="center">❌</td>
-      <td align="center" colspan="52">❓</td>
+      <td align="center" colspan="53">❓</td>
     </tr>
     <tr>
       <td><b>Velocity</b></td>
       <td align="center">❌</td>
-      <td align="center" colspan="52">❓</td>
+      <td align="center" colspan="53">❓</td>
     </tr>
     <tr>
       <td><b>Sponge</b></td>
-      <td align="center" colspan="53">❌</td>
+      <td align="center" colspan="54">❌</td>
     </tr>
     <tr>
       <td><b>Fabric</b></td>
-      <td align="center" colspan="53">❌</td>
+      <td align="center" colspan="54">❌</td>
     </tr>
     <tr>
       <td><b>Forge</b></td>
-      <td align="center" colspan="53">❌</td>
+      <td align="center" colspan="54">❌</td>
     </tr>
     <tr>
       <td><b>NeoForge</b></td>
-      <td align="center" colspan="53">❌</td>
+      <td align="center" colspan="54">❌</td>
     </tr>
   </tbody>
 </table>
