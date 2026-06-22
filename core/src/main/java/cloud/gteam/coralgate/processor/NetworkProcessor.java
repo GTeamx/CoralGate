@@ -56,7 +56,7 @@ public class NetworkProcessor implements PacketListener {
         final String ipAddress = inetSocketAddress.getHostString();
 
         // Exempt local IP addresses according to configuration file.
-        if (this.corePlugin.getConfigManager().getConfig().isIgnoreLocalAddresses()) {
+        if (this.corePlugin.getConfigManager().getConfig().isIgnoreLocalAddresses() && !this.corePlugin.isTestMode()) {
 
             try {
 
@@ -318,7 +318,7 @@ public class NetworkProcessor implements PacketListener {
         final String ipAddress = inetSocketAddress.getHostString();
 
         // Exempt local IP addresses according to configuration file.
-        if (this.corePlugin.getConfigManager().getConfig().isIgnoreLocalAddresses()) {
+        if (this.corePlugin.getConfigManager().getConfig().isIgnoreLocalAddresses() && !this.corePlugin.isTestMode()) {
 
             try {
 
@@ -438,7 +438,7 @@ public class NetworkProcessor implements PacketListener {
     }
 
     private String getForgedMOTD() {
-        return "{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"CraftBukkit 26.1.1\",\"protocol\":775},\"enforcesSecureChat\":true}";
+        return "{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"CraftBukkit 26.2\",\"protocol\":776},\"enforcesSecureChat\":true}";
     }
 
 }
