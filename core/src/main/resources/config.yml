@@ -82,7 +82,7 @@ filter-settings:
   # - 169.254.0.0/16 (RFC 3927)
   # - 127.0.0.0/8 (RFC 1122 / RFC 6890)
   #
-  # Except if you are doing local scanner tests, we recommend keeping this to 'true'
+  # Except if you are doing local scanner tests, we recommend keeping this to 'true'.
   #
   # Expected value type: Boolean
   # Expected value: true
