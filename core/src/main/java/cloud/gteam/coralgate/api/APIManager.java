@@ -31,11 +31,14 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class APIManager {
+
+    private final Set<CompletableFuture<?>> pendingFutures = ConcurrentHashMap.newKeySet();
 
     private final AsyncHttpClient httpClient;
     private final Map<String, CacheEntry> ipCache = new ConcurrentHashMap<>();
@@ -104,7 +107,7 @@ public class APIManager {
 
         }
 
-        return this.httpClient.prepareGet(this.baseUrl + ipAddress)
+        final CompletableFuture<Boolean> future = this.httpClient.prepareGet(this.baseUrl + ipAddress)
                 .setHeader("User-Agent", "CoralGate-Plugin/" + this.corePlugin.getPlatformProperties().getProperty("platform-version") + "/" + this.corePlugin.getPlatformProperties().getProperty("platform-name") + " (Minecraft Server)")
                 .execute()
                 .toCompletableFuture()
@@ -114,6 +117,12 @@ public class APIManager {
                     this.healthStatus = false;
                     return false;
                 });
+
+        // Keep track of requests to cleanly clear them on shutdown.
+        this.pendingFutures.add(future);
+        future.whenComplete((res, ex) -> this.pendingFutures.remove(future));
+
+        return future;
 
     }
 
@@ -200,13 +209,16 @@ public class APIManager {
 
     public void shutdown() {
 
+        // Forcefully cancel any HTTP callbacks still hanging around.
+        for (final CompletableFuture<?> forFuture : this.pendingFutures) {
+            if (!forFuture.isDone()) forFuture.cancel(true);
+        }
+
+        this.pendingFutures.clear();
+
         try {
-
             if (!this.httpClient.isClosed()) this.httpClient.close();
-
-            Thread.sleep(50);
-
-        } catch (final IOException | InterruptedException e) {
+        } catch (final IOException e) {
             CorePlugin.getLogger().severe("Couldn't close AsyncHttpClient. See error: " + e.getMessage());
         }
 
