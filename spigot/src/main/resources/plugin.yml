@@ -1,6 +1,7 @@
 name: CoralGate
 version: "${version}"
 main: cloud.gteam.coralgate.SpigotPlugin
+api-version: 1.13
 prefix: CoralGate
 load: STARTUP
 authors: [ XIII___, Vagdedes2 ]
