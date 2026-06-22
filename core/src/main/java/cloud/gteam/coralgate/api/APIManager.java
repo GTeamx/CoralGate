@@ -201,8 +201,12 @@ public class APIManager {
     public void shutdown() {
 
         try {
+
             if (!this.httpClient.isClosed()) this.httpClient.close();
-        } catch (final IOException e) {
+
+            Thread.sleep(50);
+
+        } catch (final IOException | InterruptedException e) {
             CorePlugin.getLogger().severe("Couldn't close AsyncHttpClient. See error: " + e.getMessage());
         }
 

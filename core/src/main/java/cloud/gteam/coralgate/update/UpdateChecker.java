@@ -91,8 +91,12 @@ public class UpdateChecker {
     public void shutdown() {
 
         try {
+
             if (!this.httpClient.isClosed()) this.httpClient.close();
-        } catch (final IOException e) {
+
+            Thread.sleep(50);
+
+        } catch (final IOException | InterruptedException e) {
             CorePlugin.getLogger().severe("Error closing UpdateChecker client: " + e.getMessage());
         }
 
