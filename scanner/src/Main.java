@@ -32,7 +32,7 @@ public class Main {
 
         final long startTime = System.currentTimeMillis();
 
-        System.out.println("Starting CoralGate filter tester v1.1.0");
+        System.out.println("Starting CoralGate filter tester v1.1.1");
 
         // Broken handshake.
         System.out.print(" (1) Broken handshake: ");
