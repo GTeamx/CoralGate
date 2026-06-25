@@ -31,7 +31,7 @@ import java.io.InputStream;
 
 public class ConfigManager {
 
-    private final String latestConfigVersion = "0.2.0";
+    private final String latestConfigVersion = "0.2.1";
 
     private final String configFileName;
     private final File configFile;
@@ -81,7 +81,7 @@ public class ConfigManager {
 
         if (this.document == null) return;
 
-        this.config.setConfigVersion(this.document.getString("version", "0.2.0"));
+        this.config.setConfigVersion(this.document.getString("version", "0.2.1"));
 
         this.config.setNormalPrefix(this.document.getString("prefixes.normal", "§b§lCoralGate §7» §r"));
         this.config.setWarningPrefix(this.document.getString("prefixes.warning", "§6§lCoralGate §7» §r"));
@@ -94,6 +94,8 @@ public class ConfigManager {
         this.config.setApiVersion(this.document.getString("api-settings.version", "v2"));
         this.config.setApiTriggerField(this.document.getString("api-settings.trigger-field", "blocked_status"));
         this.config.setApiTriggerFieldValue(this.document.getString("api-settings.trigger-field-value", "true"));
+
+        this.config.setIgnoreLocalAddresses(this.document.getBoolean("filter-settings.ignore-local-addresses", true));
 
     }
 

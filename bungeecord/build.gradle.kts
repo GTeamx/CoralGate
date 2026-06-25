@@ -25,7 +25,7 @@ repositories {
     maven("https://repo.codemc.io/repository/maven-releases/")
 
     // BungeeCord repository.
-    maven("https://hub.spigotmc.org/nexus/content/repositories/releases/")
+    maven("https://hub.spigotmc.org/nexus/content/groups/public/")
 
 }
 

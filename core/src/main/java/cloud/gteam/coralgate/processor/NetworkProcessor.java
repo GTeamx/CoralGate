@@ -33,6 +33,8 @@ import com.github.retrooper.packetevents.wrapper.login.client.WrapperLoginClient
 import com.github.retrooper.packetevents.wrapper.status.client.WrapperStatusClientPing;
 import com.github.retrooper.packetevents.wrapper.status.server.WrapperStatusServerResponse;
 
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,6 +54,19 @@ public class NetworkProcessor implements PacketListener {
 
         final InetSocketAddress inetSocketAddress = packetReceiveEvent.getSocketAddress();
         final String ipAddress = inetSocketAddress.getHostString();
+
+        // Exempt local IP addresses according to configuration file.
+        if (this.corePlugin.getConfigManager().getConfig().isIgnoreLocalAddresses() && !this.corePlugin.isTestMode()) {
+
+            try {
+
+                final InetAddress inetAddress = InetAddress.getByName(ipAddress);
+
+                if (inetAddress.isSiteLocalAddress() || inetAddress.isLoopbackAddress() || inetAddress.isLinkLocalAddress()) return;
+
+            } catch (final IOException ignored) {}
+
+        }
 
         final PacketTypeCommon packetTypeCommon = packetReceiveEvent.getPacketType();
 
@@ -302,6 +317,19 @@ public class NetworkProcessor implements PacketListener {
         final InetSocketAddress inetSocketAddress = packetSendEvent.getSocketAddress();
         final String ipAddress = inetSocketAddress.getHostString();
 
+        // Exempt local IP addresses according to configuration file.
+        if (this.corePlugin.getConfigManager().getConfig().isIgnoreLocalAddresses() && !this.corePlugin.isTestMode()) {
+
+            try {
+
+                final InetAddress inetAddress = InetAddress.getByName(ipAddress);
+
+                if (inetAddress.isSiteLocalAddress() || inetAddress.isLoopbackAddress() || inetAddress.isLinkLocalAddress()) return;
+
+            } catch (final IOException ignored) {}
+
+        }
+
         final PacketTypeCommon packetTypeCommon = packetSendEvent.getPacketType();
 
         /*
@@ -410,7 +438,7 @@ public class NetworkProcessor implements PacketListener {
     }
 
     private String getForgedMOTD() {
-        return "{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"CraftBukkit 26.1.1\",\"protocol\":775},\"enforcesSecureChat\":true}";
+        return "{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"CraftBukkit 26.2\",\"protocol\":776},\"enforcesSecureChat\":true}";
     }
 
 }

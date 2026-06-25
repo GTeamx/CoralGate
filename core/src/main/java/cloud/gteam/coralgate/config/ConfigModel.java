@@ -46,6 +46,14 @@ public class ConfigModel {
 
     }
 
+    private final FilterSettings filterSettings = new FilterSettings();
+
+    private static class FilterSettings {
+
+        private boolean ignoreLocalAddresses = true;
+
+    }
+
     public void setConfigVersion(final String version) {
         this.version = version;
     }
@@ -132,6 +140,14 @@ public class ConfigModel {
 
     public String getExpectedTriggerFieldValue() {
         return this.apiSettings.triggerFieldValue;
+    }
+
+    public void setIgnoreLocalAddresses(final boolean ignoreLocalAddresses) {
+        this.filterSettings.ignoreLocalAddresses = ignoreLocalAddresses;
+    }
+
+    public boolean isIgnoreLocalAddresses() {
+        return this.filterSettings.ignoreLocalAddresses;
     }
 
 }

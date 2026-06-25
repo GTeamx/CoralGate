@@ -1,17 +1,18 @@
-// Project related options
-extra["coreVersion"] = "0.4.1-rc"
+// Project related options.
+extra["coreVersion"] = "0.4.2-rc"
 
-// Dependency related options
-extra["lampVersion"] = "4.0.0-rc.16"
-extra["packetEventsVersion"] = "2.12.2"
+// Dependency related options.
+extra["lampVersion"] = "4.0.0-rc.17"
+extra["packetEventsVersion"] = "2.13.0"
 extra["bstatsVersion"] = "3.2.1"
 
 subprojects {
 
     group = "cloud.gteam"
-    version = "0.3.0-rc"
+    version = "0.3.1-rc"
 
     repositories {
         mavenCentral()
     }
+
 }

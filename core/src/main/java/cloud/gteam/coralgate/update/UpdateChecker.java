@@ -26,9 +26,13 @@ import org.asynchttpclient.Dsl;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class UpdateChecker {
+
+    private CompletableFuture<Boolean> updateCheckFuture = null;
 
     private final AsyncHttpClient httpClient;
     private final CorePlugin corePlugin;
@@ -47,10 +51,16 @@ public class UpdateChecker {
 
     public CompletableFuture<Boolean> isUpToDate() {
 
-        final String fullVersion = this.corePlugin.getPlatformProperties().getProperty("core-version") + "_" + this.corePlugin.getPlatformProperties().getProperty("platform-version");
+        final String currentVersion = this.corePlugin.getPlatformProperties().getProperty("platform-version");
 
-        return this.httpClient.prepareGet("https://api.github.com/repos/GTeamX/CoralGate/releases/latest")
-                .setHeader("User-Agent", "CoralGate-UpdateChecker/" + fullVersion)
+        // This is a dev/preview build, assume it's "up to date" to not show an out of date console message.
+        if (currentVersion.endsWith("-SNAPSHOT")) return CompletableFuture.completedFuture(true);
+
+        // Use cache.
+        if (this.updateCheckFuture != null) return this.updateCheckFuture;
+
+        this.updateCheckFuture = this.httpClient.prepareGet("https://api.github.com/repos/GTeamX/CoralGate/releases/latest")
+                .setHeader("User-Agent", "CoralGate-UpdateChecker/" + currentVersion)
                 .setHeader("Accept", "application/vnd.github+json")
                 .execute()
                 .toCompletableFuture()
@@ -67,7 +77,7 @@ public class UpdateChecker {
 
                         this.latestVersion = Objects.requireNonNull(json.get("tag_name")).toJson(false, false).replace("\"", "");
 
-                        return this.latestVersion.equalsIgnoreCase(fullVersion);
+                        return this.latestVersion.equalsIgnoreCase(currentVersion);
 
                     } catch (final Exception e) {
 
@@ -83,9 +93,17 @@ public class UpdateChecker {
                     return false;
 
                 });
+
+        return this.updateCheckFuture;
+
     }
 
     public void shutdown() {
+
+        // Forcefully cancel any HTTP callbacks still hanging around.
+        if (this.updateCheckFuture != null && !this.updateCheckFuture.isDone()) {
+            this.updateCheckFuture.cancel(true);
+        }
 
         try {
             if (!this.httpClient.isClosed()) this.httpClient.close();

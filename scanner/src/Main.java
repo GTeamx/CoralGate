@@ -18,9 +18,9 @@ public class Main {
 
     private static final String TARGET_IP = "127.0.0.1";
     private static final int TARGET_PORT = 25565;
-    private static final int PROTOCOL_VERSION = 47; // 1.8.x
+    private static final int PROTOCOL_VERSION = 776; // 26.2
 
-    private static final String FORGED_MOTD = "{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"CraftBukkit 26.1.1\",\"protocol\":775},\"enforcesSecureChat\":true}";
+    private static final String FORGED_MOTD = "{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"CraftBukkit 26.2\",\"protocol\":776},\"enforcesSecureChat\":true}";
 
     private static boolean isExposed = false; // Added to track if the backend leaked.
 
@@ -32,7 +32,7 @@ public class Main {
 
         final long startTime = System.currentTimeMillis();
 
-        System.out.println("Starting CoralGate filter tester v1.1.0");
+        System.out.println("Starting CoralGate filter tester v1.1.1");
 
         // Broken handshake.
         System.out.print(" (1) Broken handshake: ");

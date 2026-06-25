@@ -27,6 +27,9 @@ repositories {
     // Spigot repository.
     maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
 
+    // bungeecord-chat repository.
+    maven("https://hub.spigotmc.org/nexus/content/groups/public/")
+
 }
 
 dependencies {
