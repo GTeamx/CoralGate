@@ -208,6 +208,14 @@ If you wish to get support, test or have any questions about CoralGate, make sur
     <tr>
       <td><b>BungeeCord</b></td>
       <td align="center">❌</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">❌</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
+      <td align="center">✅</td>
       <td align="center" colspan="53">❓</td>
     </tr>
     <tr>
