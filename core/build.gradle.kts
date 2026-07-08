@@ -58,7 +58,7 @@ tasks.processResources {
 
 tasks.shadowJar {
 
-    archiveClassifier.set("") // produce core.jar instead of core-all.jar
+    archiveClassifier = "" // produce core.jar instead of core-all.jar
 
     relocate("dev.dejvokep.boostedyaml", "cloud.gteam.coralgate.libs.boostedyaml")
 

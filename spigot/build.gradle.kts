@@ -64,11 +64,11 @@ tasks.processResources {
 tasks.shadowJar {
 
     // Wait for the core shadowJar to finish.
-    dependsOn(project(":core").tasks.named("shadowJar"))
+    dependsOn(":core:shadowJar")
 
-    archiveBaseName.set("CoralGate-Spigot")
-    archiveVersion.set(project.version.toString())
-    archiveClassifier.set("")
+    archiveBaseName = "CoralGate-Spigot"
+    archiveVersion = project.version.toString()
+    archiveClassifier = ""
 
     // Relocate bStats.
     relocate("org.bstats", "cloud.gteam.coralgate.libs.bstats")
@@ -80,10 +80,6 @@ tasks.shadowJar {
     exclude("META-INF/*.DSA")
     exclude("META-INF/*.RSA")
 
-}
-
-tasks.compileJava {
-    dependsOn(project(":core").tasks.named("jar"))
 }
 
 tasks.build {

@@ -63,11 +63,11 @@ tasks.processResources {
 tasks.shadowJar {
 
     // Wait for the core shadowJar to finish.
-    mustRunAfter(project(":core").tasks.named("shadowJar"))
+    dependsOn(":core:shadowJar")
 
-    archiveBaseName.set("CoralGate-Velocity")
-    archiveVersion.set(project.version.toString())
-    archiveClassifier.set("")
+    archiveBaseName = "CoralGate-Velocity"
+    archiveVersion = project.version.toString()
+    archiveClassifier = ""
 
     // Relocate bStats.
     relocate("org.bstats", "cloud.gteam.coralgate.libs.bstats")
