@@ -4,6 +4,7 @@
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <option name="MAIN_CLASS_NAME" value="Main" />
     <module name="scanner" />
+    <option name="PROGRAM_PARAMETERS" value="127.0.0.1 25565" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/scanner" />
     <method v="2">
       <option name="Make" enabled="true" />
