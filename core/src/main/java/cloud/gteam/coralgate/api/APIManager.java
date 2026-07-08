@@ -61,21 +61,24 @@ public class APIManager {
         this.jankson = Jankson.builder().build();
     }
 
-    public CompletableFuture<Boolean> isIpBlocked(final String ipAddress) {
+    public boolean isIpBlocked(final String ipAddress) {
 
         // Get IP from cache before fetching from API.
         final CacheEntry entry = this.ipCache.get(ipAddress);
 
         // Serve cache if available.
         if (entry != null && !entry.isExpired(this.cacheTime)) {
-            return CompletableFuture.completedFuture(entry.isBlocked());
+            return entry.isBlocked();
         }
 
-        // Cache not available, fetch from API.
-        return fetchFromApi(ipAddress).thenApply(result -> {
-            if (this.corePlugin.getConfigManager().getConfig().isAllowApiUsage()) this.ipCache.put(ipAddress, new CacheEntry(result));
-            return result;
-        });
+        // Cache not available, fetch from API synchronously.
+        boolean result = fetchFromApi(ipAddress);
+
+        if (this.corePlugin.getConfigManager().getConfig().isAllowApiUsage()) {
+            this.ipCache.put(ipAddress, new CacheEntry(result));
+        }
+
+        return result;
 
     }
 
@@ -88,22 +91,26 @@ public class APIManager {
         fetchFromApi(ipAddress);
     }
 
-    private CompletableFuture<Boolean> fetchFromApi(final String ipAddress) {
+    private boolean fetchFromApi(final String ipAddress) {
 
-        if (!this.corePlugin.getConfigManager().getConfig().isAllowApiUsage()) return CompletableFuture.completedFuture(false);
+        if (!this.corePlugin.getConfigManager().getConfig().isAllowApiUsage()) {
+            return false; // Not blocked.
+        }
 
         try {
 
             final InetAddress inetAddress = InetAddress.getByName(ipAddress);
-
-            if (inetAddress.isSiteLocalAddress() || inetAddress.isLoopbackAddress() || inetAddress.isLinkLocalAddress()) return CompletableFuture.completedFuture(false);
+            if (inetAddress.isSiteLocalAddress() || inetAddress.isLoopbackAddress() || inetAddress.isLinkLocalAddress()) {
+                return false; // Not blocked.
+            }
 
         } catch (final UnknownHostException e) {
 
             CorePlugin.getLogger().severe("Couldn't parse IP address. Is the API properly configured? See error: " + e.getMessage());
             this.healthStatus = false;
 
-            return CompletableFuture.completedFuture(false);
+            // Not blocked.
+            return false;
 
         }
 
@@ -115,14 +122,14 @@ public class APIManager {
                 .exceptionally(e -> {
                     CorePlugin.getLogger().severe("Couldn't reach API. Is it down? See error: " + e.getMessage());
                     this.healthStatus = false;
-                    return false;
+                    return false; // Not blocked.
                 });
 
         // Keep track of requests to cleanly clear them on shutdown.
         this.pendingFutures.add(future);
-        future.whenComplete((res, ex) -> this.pendingFutures.remove(future));
+        future.whenComplete((res, exception) -> this.pendingFutures.remove(future));
 
-        return future;
+        return future.join();
 
     }
 
@@ -139,9 +146,12 @@ public class APIManager {
             final JsonElement field = json.get(expectedField);
 
             if (field == null) {
+
                 CorePlugin.getLogger().severe("Couldn't find field '" + expectedField + "' in API's JSON response. Did the API change? No error to display.");
                 this.healthStatus = false;
-                return false;
+
+                return false; // Not blocked.
+
             }
 
             // Compare values.
@@ -153,14 +163,14 @@ public class APIManager {
 
             this.healthStatus = true;
 
-            return Objects.equals(actualValue, expectedValue);
+            return Objects.equals(actualValue, expectedValue); // Blocked.
 
         } catch (final Exception e) {
 
             CorePlugin.getLogger().severe("Couldn't parse '" + expectedField + "' status from API. Did the API change? See error: " + e.getMessage());
             this.healthStatus = false;
 
-            return false;
+            return false; // Not blocked.
 
         }
 
@@ -184,7 +194,9 @@ public class APIManager {
                         // Extract the "health" field.
                         final JsonElement healthField = json.get("health");
 
-                        if (healthField == null) return false;
+                        if (healthField == null) {
+                            return false;
+                        }
 
                         // Clean the value and compare to "OK".
                         this.healthStatus = "OK".equalsIgnoreCase(healthField.toJson(false, false).replace("\"", ""));
@@ -211,13 +223,21 @@ public class APIManager {
 
         // Forcefully cancel any HTTP callbacks still hanging around.
         for (final CompletableFuture<?> forFuture : this.pendingFutures) {
-            if (!forFuture.isDone()) forFuture.cancel(true);
+
+            if (!forFuture.isDone()) {
+                forFuture.cancel(true);
+            }
+
         }
 
         this.pendingFutures.clear();
 
         try {
-            if (!this.httpClient.isClosed()) this.httpClient.close();
+
+            if (!this.httpClient.isClosed()) {
+                this.httpClient.close();
+            }
+
         } catch (final IOException e) {
             CorePlugin.getLogger().severe("Couldn't close AsyncHttpClient. See error: " + e.getMessage());
         }
