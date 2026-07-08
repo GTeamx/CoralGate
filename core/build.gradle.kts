@@ -45,6 +45,7 @@ dependencies {
 
     compileOnly("com.github.retrooper:packetevents-api:$packetEventsVersion")
     compileOnly("com.google.code.gson:gson:2.14.0")
+    compileOnly("net.kyori:adventure-api:4.26.1")
 
 }
 
