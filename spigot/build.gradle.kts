@@ -43,7 +43,9 @@ dependencies {
     compileOnly(libs.spigot.api)
 
     // Core implementation.
-    implementation(project(":core"))
+    implementation(project(":core")) {
+        exclude("io.netty")
+    }
 
 }
 
@@ -70,11 +72,13 @@ tasks.shadowJar {
     archiveVersion = project.version.toString()
     archiveClassifier = ""
 
+    exclude("io/netty/**")
+
     // Relocate bStats.
     relocate("org.bstats", "cloud.gteam.coralgate.libs.bstats")
 
     // Relocate netty.
-    relocate("io.netty", "cloud.gteam.coralgate.libs.netty")
+//    relocate("io.netty", "cloud.gteam.coralgate.libs.netty")
 
     exclude("META-INF/*.SF")
     exclude("META-INF/*.DSA")
