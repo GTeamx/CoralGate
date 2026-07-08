@@ -58,8 +58,8 @@ tasks.processResources {
     val packetEventsVersion: String by rootProject.extra
     val coreVersion: String by rootProject.extra
 
-    // Replace plugin.yml
-    filesMatching("plugin.yml") {
+    // Replaces placeholders in BOTH yml files.
+    filesMatching(listOf("plugin.yml", "paper-plugin.yml")) {
         expand("version" to project.version)
     }
 
