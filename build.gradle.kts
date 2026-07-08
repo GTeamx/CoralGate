@@ -1,11 +1,3 @@
-// Project related options.
-extra["coreVersion"] = "0.4.3-SNAPSHOT"
-
-// Dependency related options.
-extra["lampVersion"] = "4.0.0-rc.17"
-extra["packetEventsVersion"] = "2.13.0"
-extra["bstatsVersion"] = "3.2.1"
-
 subprojects {
 
     group = "cloud.gteam"

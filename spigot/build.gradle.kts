@@ -1,7 +1,7 @@
 plugins {
 
     `java-library`
-    id("com.gradleup.shadow") version "9.5.1"
+    alias(libs.plugins.shadow)
 
 }
 
@@ -34,18 +34,13 @@ repositories {
 
 dependencies {
 
-    // Get versions.
-    val lampVersion: String by rootProject.extra
-    val packetEventsVersion: String by rootProject.extra
-    val bstatsVersion: String by rootProject.extra
-
     // Dependencies.
-    implementation("org.bstats:bstats-bukkit:$bstatsVersion")
-    implementation("io.github.revxrsal:lamp.common:$lampVersion")
-    implementation("io.github.revxrsal:lamp.bukkit:$lampVersion")
+    implementation(libs.bstats.bukkit)
+    implementation(libs.lamp.common)
+    implementation(libs.lamp.bukkit)
 
-    compileOnly("com.github.retrooper:packetevents-spigot:$packetEventsVersion")
-    compileOnly("org.spigotmc:spigot-api:1.8-R0.1-SNAPSHOT")
+    compileOnly(libs.packetevents.spigot)
+    compileOnly(libs.spigot.api)
 
     // Core implementation.
     implementation(project(":core"))
@@ -54,25 +49,14 @@ dependencies {
 
 tasks.processResources {
 
-    // Get versions.
-    val packetEventsVersion: String by rootProject.extra
-    val coreVersion: String by rootProject.extra
+    inputs.property("name", project.name)
+    inputs.property("version", project.version)
+    inputs.property("coreVersion", libs.versions.coreVersion.get())
+    inputs.property("packeteventsVersion", libs.versions.packetevents.get())
 
     // Replaces placeholders in BOTH yml files.
     filesMatching(listOf("plugin.yml", "paper-plugin.yml")) {
-        expand("version" to project.version)
-    }
-
-    // Replace properties.
-    filesMatching("platform.properties") {
-
-        expand(
-            "name" to project.name,
-            "version" to project.version,
-            "coreVersion" to coreVersion,
-            "packeteventsVersion" to packetEventsVersion
-        )
-
+        expand(inputs.properties)
     }
 
 }

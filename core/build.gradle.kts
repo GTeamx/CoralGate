@@ -3,12 +3,12 @@ import org.gradle.kotlin.dsl.shadowJar
 plugins {
 
     `java-library`
-    id("com.gradleup.shadow") version "9.5.1"
+    alias(libs.plugins.shadow)
 
 }
 
 group = "cloud.gteam.coralgate"
-version = rootProject.extra["coreVersion"]!!
+version = libs.versions.coreVersion.get()
 
 java {
 
@@ -32,31 +32,26 @@ repositories {
 
 dependencies {
 
-    // Get versions.
-    val lampVersion: String by rootProject.extra
-    val packetEventsVersion: String by rootProject.extra
-
     // Dependencies.
-    implementation("io.github.revxrsal:lamp.common:$lampVersion")
-    implementation("blue.endless:jankson:1.2.3")
-    implementation("org.asynchttpclient:async-http-client:2.16.0")
-    implementation("org.jetbrains:annotations:26.1.0")
-    implementation("dev.dejvokep:boosted-yaml:1.3.7")
+    implementation(libs.lamp.common)
+    implementation(libs.jankson)
+    implementation(libs.async.http.client)
+    implementation(libs.jetbrains.annotations)
+    implementation(libs.boosted.yaml)
 
-    compileOnly("com.github.retrooper:packetevents-api:$packetEventsVersion")
-    compileOnly("com.google.code.gson:gson:2.14.0")
-    compileOnly("net.kyori:adventure-api:4.26.1")
+    compileOnly(libs.packetevents.api)
+    compileOnly(libs.gson)
+    compileOnly(libs.adventure.api)
 
 }
 
 tasks.processResources {
 
-    val props = mapOf("version" to version)
-    inputs.properties(props)
+    inputs.property("version", version)
     filteringCharset = "UTF-8"
 
     filesNotMatching("**/*.png") {
-        expand(props)
+        expand(inputs.properties)
     }
 
 }
