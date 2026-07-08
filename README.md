@@ -188,11 +188,11 @@ If you wish to get support, test or have any questions about CoralGate, make sur
       <td align="center">✅</td>
       <td align="center">✅</td>
       <td align="center">❌</td>
-      <td align="center">✅</td>
-      <td align="center">✅</td>
-      <td align="center">✅</td>
-      <td align="center">✅</td>
-      <td align="center">✅</td>
+      <td align="center">⚠️</td>
+      <td align="center">⚠️</td>
+      <td align="center">⚠️</td>
+      <td align="center">⚠️</td>
+      <td align="center">⚠️</td>
       <td align="center">✅</td>
       <td align="center">✅</td>
       <td align="center">✅</td>
@@ -304,6 +304,12 @@ If you wish to get support, test or have any questions about CoralGate, make sur
 - Only 1.16.x build exists.
 - Only 1.18.x build exists.
 - 1.19.3 throws java.lang.RuntimeException: The received byte array length is longer than maximum allowed (8742 > 512) for LOGIN_START wrapper.
+- 1.19.4 use Spigot version.
+- 1.20 use Spigot version.
+- 1.20.1 use Spigot version.
+- 1.20.2 use Spigot version.
+- 1.20.4 use Spigot version.
+- 1.20.5 use Spigot version.
 
 **BungeeCord**:
 - 1.9.1 jar cannot be downloaded or built.
