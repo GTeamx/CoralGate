@@ -60,7 +60,9 @@ public final class CorePlugin {
         // packetevents versions do not match.
         if (!peCoreVersion.equals(peServerVersion)) {
             logger.warning("packetevents version mismatch! You are using version '" + peServerVersion + "' but core module uses '" + peCoreVersion + "'! You may experience issues or bugs. Update CoralGate and packetevents to fix this issue.");
-        } else logger.info("Using packetevents version '" + peCoreVersion + "'...");
+        } else {
+            logger.info("Using packetevents version '" + peCoreVersion + "'...");
+        }
 
         this.testMode = new File(dataFolder, "test.mode").exists();
 
@@ -71,7 +73,9 @@ public final class CorePlugin {
         final String latestConfigVersion = this.configManager.getLatestConfigVersion();
 
         // Compare to internal configuration version to see if it's outdated.
-        if (!Objects.equals(latestConfigVersion, this.configManager.getConfig().getConfigVersion())) logger.warning("Please consider upgrading your configuration file to the latest version: '" + latestConfigVersion + "'.");
+        if (!Objects.equals(latestConfigVersion, this.configManager.getConfig().getConfigVersion())) {
+            logger.warning("Please consider upgrading your configuration file to the latest version: '" + latestConfigVersion + "'.");
+        }
 
         logger.info("Using configuration file version '" + this.configManager.getConfig().getConfigVersion() + "'.");
 
@@ -93,9 +97,13 @@ public final class CorePlugin {
 
                 });
 
-            } else logger.info("API health check skipped.");
+            } else {
+                logger.info("API health check skipped.");
+            }
 
-        } else logger.info("API loading skipped (disabled by config).");
+        } else {
+            logger.info("API loading skipped (disabled by config).");
+        }
 
         this.onlineMode = onlineMode;
 
@@ -125,8 +133,13 @@ public final class CorePlugin {
 
     public void onDisable() {
 
-        if (this.apiManager != null) this.apiManager.shutdown();
-        if (this.updateChecker != null) this.updateChecker.shutdown();
+        if (this.apiManager != null) {
+            this.apiManager.shutdown();
+        }
+
+        if (this.updateChecker != null) {
+            this.updateChecker.shutdown();
+        }
 
     }
 

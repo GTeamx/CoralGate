@@ -52,8 +52,10 @@ public class ConfigManager {
             final InputStream defaultStream = getClass().getClassLoader().getResourceAsStream(this.configFileName);
 
             if (defaultStream == null) {
+
                 CorePlugin.getLogger().severe("Could not find default resource file: " + this.configFileName);
                 return;
+
             }
 
             this.config = new ConfigModel();
@@ -109,7 +111,9 @@ public class ConfigManager {
                 if (!this.configFile.getParentFile().mkdirs()) CorePlugin.getLogger().severe("Couldn't create data folders. Is the directory read-only? No error to display.");
             }
 
-            if (this.document != null) this.document.save();
+            if (this.document != null) {
+                this.document.save();
+            }
 
         } catch (final IOException e) {
             CorePlugin.getLogger().severe("Couldn't write data to " + this.configFileName + ". Is the directory read-only? See error:" + e.getMessage());

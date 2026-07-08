@@ -34,7 +34,11 @@ public final class ConfigUtils {
 
             final List<String> lines = Files.readAllLines(Paths.get(fileName));
             for (final String line : lines) {
-                if (line.trim().startsWith("online-mode")) return line.contains("true");
+
+                if (line.trim().startsWith("online-mode")) {
+                    return line.contains("true");
+                }
+
             }
 
         } catch (final IOException e) {

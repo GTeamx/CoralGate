@@ -120,7 +120,9 @@ public class CoralGateCommand {
         config = configManager.getConfig();
 
         // Compare current config version and latest version and alert the user if necessary.
-        if (!Objects.equals(latestConfigVersion, config.getConfigVersion())) actor.sendRawMessage(config.getWarningPrefix() + "Please consider upgrading your configuration file to the latest version: '" + latestConfigVersion + "'. Your configuration file is at version '" + config.getConfigVersion() + "'.");
+        if (!Objects.equals(latestConfigVersion, config.getConfigVersion())) {
+            actor.sendRawMessage(config.getWarningPrefix() + "Please consider upgrading your configuration file to the latest version: '" + latestConfigVersion + "'. Your configuration file is at version '" + config.getConfigVersion() + "'.");
+        }
 
         actor.sendRawMessage(config.getNormalPrefix() + "Configuration file reloaded!");
 

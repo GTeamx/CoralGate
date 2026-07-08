@@ -38,7 +38,9 @@ public class PermissionFactory implements CommandPermission.Factory<CommandActor
 
         final cloud.gteam.coralgate.commands.permissions.CommandPermission ann = annotations.get(cloud.gteam.coralgate.commands.permissions.CommandPermission.class);
 
-        if (ann == null) return null;
+        if (ann == null) {
+            return null;
+        }
 
         return (actor) -> permissionChecker.hasPermission(actor, ann.value());
 

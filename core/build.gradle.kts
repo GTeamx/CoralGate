@@ -39,12 +39,12 @@ dependencies {
     // Dependencies.
     implementation("io.github.revxrsal:lamp.common:$lampVersion")
     implementation("blue.endless:jankson:1.2.3")
-    compileOnly("com.google.code.gson:gson:2.14.0")
     implementation("org.asynchttpclient:async-http-client:2.16.0")
     implementation("org.jetbrains:annotations:26.1.0")
     implementation("dev.dejvokep:boosted-yaml:1.3.7")
 
     compileOnly("com.github.retrooper:packetevents-api:$packetEventsVersion")
+    compileOnly("com.google.code.gson:gson:2.14.0")
 
 }
 
