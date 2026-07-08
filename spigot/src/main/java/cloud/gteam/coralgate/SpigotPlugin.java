@@ -21,6 +21,7 @@ package cloud.gteam.coralgate;
 import cloud.gteam.coralgate.commands.CoralGateCommand;
 import cloud.gteam.coralgate.commands.SpigotPermissionChecker;
 import cloud.gteam.coralgate.commands.permissions.PermissionFactory;
+import cloud.gteam.coralgate.injector.CoralGateInjector;
 import cloud.gteam.coralgate.processor.NetworkProcessor;
 import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -38,14 +39,24 @@ public final class SpigotPlugin extends JavaPlugin {
 
     private final CorePlugin corePlugin = new CorePlugin();
 
+    private final CoralGateInjector injector = new CoralGateInjector();
+
     @Override
     public void onLoad() {
         PacketEvents.getAPI().getEventManager().registerListener(
                 new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
+
+        if (!injector.isServerBound()) {
+            injector.inject();
+        }
     }
 
     @Override
     public void onEnable() {
+
+        if (!injector.hasInjected) {
+            injector.inject();
+        }
 
         // Start bStats.
         new Metrics(this, 29439);
@@ -75,6 +86,8 @@ public final class SpigotPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+
+        this.injector.uninject();
 
         this.corePlugin.onDisable();
 
