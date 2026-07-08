@@ -30,22 +30,19 @@ import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.packettype.PacketTypeCommon;
 import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 import com.github.retrooper.packetevents.protocol.player.User;
-import com.github.retrooper.packetevents.wrapper.configuration.client.WrapperConfigClientPluginMessage;
-import com.github.retrooper.packetevents.wrapper.configuration.client.WrapperConfigClientSettings;
 import com.github.retrooper.packetevents.wrapper.handshaking.client.WrapperHandshakingClientHandshake;
 import com.github.retrooper.packetevents.wrapper.login.client.WrapperLoginClientLoginStart;
 import com.github.retrooper.packetevents.wrapper.login.server.WrapperLoginServerDisconnect;
-import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPluginMessage;
-import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientSettings;
 import com.github.retrooper.packetevents.wrapper.status.client.WrapperStatusClientPing;
+import com.github.retrooper.packetevents.wrapper.status.server.WrapperStatusServerPong;
 import com.github.retrooper.packetevents.wrapper.status.server.WrapperStatusServerResponse;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Pattern;
 
 public class NetworkProcessor implements PacketListener {
 
@@ -57,201 +54,119 @@ public class NetworkProcessor implements PacketListener {
         this.corePlugin = corePlugin;
     }
 
-    // Incoming packets (Client -> Server) [C->S]
+    // Incoming packets (Client -> Server) [C->S].
     public void onPacketReceive(final PacketReceiveEvent packetReceiveEvent) {
 
         final InetSocketAddress inetSocketAddress = packetReceiveEvent.getSocketAddress();
-        final String ipAddress = inetSocketAddress.getHostString();
 
         // Exempt local IP addresses according to configuration file.
-        if (this.corePlugin.getConfigManager().getConfig().isIgnoreLocalAddresses() && !this.corePlugin.isTestMode()) {
-
-            final InetAddress inetAddress = inetSocketAddress.getAddress();
-
-            if (inetAddress.isSiteLocalAddress() || inetAddress.isLoopbackAddress() || inetAddress.isLinkLocalAddress())
-                return;
-
+        if (exemptLocalIpAddress(inetSocketAddress)) {
+            return;
         }
 
+        final String ipAddress = inetSocketAddress.getHostString();
+        final User packetUser = packetReceiveEvent.getUser();
         final PacketTypeCommon packetTypeCommon = packetReceiveEvent.getPacketType();
-        final ClientVersion clientVersion = packetReceiveEvent.getUser().getClientVersion();
-
-        System.out.println("C->S | " + packetTypeCommon);
-
-        /*
-         * SOURCE PORT FILTERING.
-         */
-
-        /* Check different condition to trigger a MOTD packet check and blockage. */
-
-        // This is the lowest dynamic port used by Linux.
-        // Anything bellow means the port was forced to use that port and is therefore, not a real Minecraft client.
-        final boolean invalidPort = inetSocketAddress.getPort() < 32768;
 
         // Match MOTD related packets.
-        final boolean isStatusPacket = packetTypeCommon == PacketType.Status.Client.PING
+        final boolean isMOTDPacket = packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE
                 || packetTypeCommon == PacketType.Status.Client.REQUEST
+                || packetTypeCommon == PacketType.Status.Client.PING
                 || packetTypeCommon == PacketType.Handshaking.Client.LEGACY_SERVER_LIST_PING;
 
-        /* Filter only packets that are used to get information about the server. */
-
-        // Handshake is also a MOTD related packet in a certain state.
-        if (isStatusPacket || packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE) {
-
-            // This is the lowest dynamic port used by Windows & Mac.
-            // Since Linux players are "rare", we'll issue a warning statement about them.
-            // Alongside that, we will block any server list ping to prevent bots from getting information about the server.
-            // (server version, online players, player count...).
-            final boolean suspiciousPort = inetSocketAddress.getPort() < 49152;
-
-            // Block the first incoming MOTD related packet of an IP.
-            final boolean processMOTD = suspiciousPort
-                    || !this.corePlugin.getApiManager().isIpBlockedCache(ipAddress)
-                    || !this.corePlugin.getApiManager().isHealthy();
-
-            if (suspiciousPort) {
-
-                // Log this suspicious connection.
-                if (!invalidPort)
-                    CorePlugin.getLogger().warning("Suspicious port used by client. Keep an eye out for " + inetSocketAddress + ". [C->S | " + packetReceiveEvent.getPacketType().getClass().getDeclaringClass().getSimpleName() + "."  + packetTypeCommon.getName() + "]");
-                else
-                    CorePlugin.getLogger().severe("Invalid port used by client. Closing connection from " + inetSocketAddress + ". [C->S | " + packetReceiveEvent.getPacketType().getClass().getDeclaringClass().getSimpleName() + "."  + packetTypeCommon.getName() + "]");
-
-                // Report the IP to CoralGate API.
-                this.corePlugin.getApiManager().reportIp(ipAddress);
-
-                // Clean up.
-                this.connectionState.remove(inetSocketAddress);
-
-            }
-
-            if (processMOTD) {
-
-                // Packet responsible for the latency showup.
-                if (packetTypeCommon == PacketType.Status.Client.PING || packetTypeCommon == PacketType.Handshaking.Client.LEGACY_SERVER_LIST_PING) {
-
-                    // Cancel packet and send a "forged" response.
-                    packetReceiveEvent.setCancelled(true);
-                    packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusClientPing(packetReceiveEvent));
-
-                    // Block further logic.
-                    return;
-
-                }
-
-                // Packet responsible for the MOTD message and server related information (player count, version).
-                if (packetTypeCommon == PacketType.Status.Client.REQUEST) {
-
-                    // Cancel the packet and send a forged generic looking MOTD.
-                    packetReceiveEvent.setCancelled(true);
-                    packetReceiveEvent.getUser().sendPacketSilently(new WrapperStatusServerResponse(getForgedMOTD()));
-
-                    // Block further logic.
-                    return;
-
-                }
-
-                // Specific 'STATUS' handshake state.
-                // Yes the condition is "always true", but I prefer to keep this in case the protocol changes in future releases.
-                if (packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE) {
-
-                    final WrapperHandshakingClientHandshake wrapperHandshakingClientHandshake = new WrapperHandshakingClientHandshake(packetReceiveEvent);
-
-                    // 'STATUS' only.
-                    if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.STATUS && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.STATUS) {
-
-                        packetReceiveEvent.setCancelled(true);
-
-                        // Block further logic.
-                        return;
-
-                    }
-
-                }
-
-            }
-
-        }
-
-        // Ran last so forged MOTD can be sent. This effectively only blocks actual connection packets.
-        if (invalidPort) {
-
-            // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-            logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Invalid port used by client.");
-
-            // Block further logic.
-            return;
-
-        }
-
-        /* Source port is ok, check IP now. */
-
-        /*
-         * API IP CHECK.
-         */
-
-        // Match every login sequence related packet.
+        // Match login sequence related packets.
         final boolean isLoginSequencePacket = packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE
                 || packetTypeCommon == PacketType.Login.Client.LOGIN_START
                 || packetTypeCommon == PacketType.Login.Client.ENCRYPTION_RESPONSE
                 || packetTypeCommon == PacketType.Login.Client.LOGIN_SUCCESS_ACK;
 
-        if (isStatusPacket || isLoginSequencePacket) {
+        boolean isInvalidProtocol = false;
 
-            if (this.corePlugin.getApiManager().isHealthy()) {
+        // Check client's protocol & client version.
+        // Only match MOTD/login sequence related packets to save resources.
+        if (isMOTDPacket || isLoginSequencePacket) {
 
-                this.corePlugin.getApiManager().isIpBlocked(ipAddress).thenAccept(blocked -> {
+            // If the client's version/protocol version is invalid.
+            //noinspection ConstantValue
+            if (packetReceiveEvent.getUser().getClientVersion() == null || packetReceiveEvent.getUser().getClientVersion().getProtocolVersion() <= 4) {
 
-                    if (blocked)
-                        // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-                        logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "IP is blocked by the API.");
+                // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+                log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Invalid protocol version.", !isMOTDPacket);
 
-                });
+                // To send fake MOTD later down the line.
+                isInvalidProtocol = true;
 
-            }
-
-        }
-
-        /*
-         * PROTOCOL FILTERING.
-         */
-
-        if (isStatusPacket || isLoginSequencePacket) {
-
-            // Exempt for local scanner test.
-            final boolean scannerTest = inetSocketAddress.getHostString().equals("127.0.0.1") && inetSocketAddress.getPort() == 65535 && this.corePlugin.isTestMode();
-            if (!scannerTest) {
-
-                // If the client's protocol version is invalid.
-                if (clientVersion == null || clientVersion.getProtocolVersion() == -1) {
-
-                    // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-                    logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Invalid protocol version.");
-
-                    // Block further logic.
-                    return;
-
-                }
+                // Block further logic.
+                if (!isMOTDPacket) return;
 
             }
 
         }
 
-        // We don't need those packets anymore.
-        if (isStatusPacket) return;
+        // This is the lowest dynamic port used by Windows & Mac.
+        // Since Linux players are "rare", we'll issue a warning statement about them.
+        // Alongside that, we will block any server list ping to prevent bots from getting information about the server.
+        // (server version, online players, player count...).
+        final boolean isSuspiciousPort = inetSocketAddress.getPort() < 49152;
 
-        /*
-         * PACKET ORDER FILTERING.
-         */
+        // This is the lowest dynamic port used by Linux.
+        // Anything bellow means the port was forcefully used and is therefore not a real Minecraft client.
+        final boolean isInvalidPort = inetSocketAddress.getPort() < 32768;
 
-        // Specific 'LOGIN' handshake login, the first packet in a legitimate connection sequence.
+        // Englobe suspicious port (which also includes invalid port) and bad protocol version.
+        final boolean isBadPacket = isSuspiciousPort || isInvalidProtocol;
+
+        // Connection initialization for both MOTD and login procedures. (cross versions, cross-platform).
         if (packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE) {
+
+            this.connectionState.put(inetSocketAddress, packetTypeCommon);
 
             final WrapperHandshakingClientHandshake wrapperHandshakingClientHandshake = new WrapperHandshakingClientHandshake(packetReceiveEvent);
 
-            if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.LOGIN && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.LOGIN) {
+            // Drop the packet if it's suspicious and if it's a STATUS packet.
+            if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.STATUS
+                    && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.STATUS) {
 
-                this.connectionState.put(inetSocketAddress, packetTypeCommon);
+                if (isBadPacket) {
+
+                    // Decide reason based on port.
+                    String reason = isInvalidPort
+                            ? "Invalid port used by client."
+                            : "Suspicious port used by client.";
+
+                    // Decide reason based on invalid protocol (or port).
+                    reason = isInvalidProtocol
+                            ? "Invalid protocol version."
+                            : reason;
+
+                    // Don't close the connection yet.
+                    log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, reason, false);
+
+                }
+
+            // Drop the packet if it's suspicious, close connection if it's invalid.
+            // Only if it's a LOGIN packet.
+            } else if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.LOGIN
+                    && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.LOGIN) {
+
+                // Close the connection.
+                if (isInvalidPort || isInvalidProtocol) {
+
+                    // Decide reason based off if the port is invalid or if the protocol version is.
+                    final String reason = isInvalidPort
+                            ? "Invalid port used by client."
+                            : "Invalid protocol version.";
+
+                    // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+                    log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, reason, true);
+
+                // Log an alert but don't close the connection.
+                } else if (isSuspiciousPort) {
+
+                    // Don't cancel the packet else the LOGIN_START procedure fails.
+                    CorePlugin.getLogger().warning("Suspicious port used by client. Keep an eye on " + inetSocketAddress + ". [C->S | " + packetReceiveEvent.getPacketType().getClass().getDeclaringClass().getSimpleName() + "." + packetTypeCommon.getName() + "]");
+
+                }
 
             }
 
@@ -260,18 +175,114 @@ public class NetworkProcessor implements PacketListener {
 
         }
 
-        // Handshake has passed (or skipped).
-        if (packetTypeCommon == PacketType.Login.Client.LOGIN_START) {
+        // Request to get server's information (MOTD, version, player count).
+        if (packetTypeCommon == PacketType.Status.Client.REQUEST) {
 
-            if (this.connectionState.getOrDefault(inetSocketAddress, null) != PacketType.Handshaking.Client.HANDSHAKE) {
+            final boolean badHandshake = this.connectionState.getOrDefault(inetSocketAddress, null) != PacketType.Handshaking.Client.HANDSHAKE;
+            final boolean sendForgedMOTD = isBadPacket || badHandshake;
 
-                // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-                logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Missing handshake procedure.");
+            // Either suspicious port or bad handshake.
+            if (sendForgedMOTD) {
 
-                // Block further logic.
-                return;
+                // Send forged MOTD.
+                packetUser.sendPacketSilently(new WrapperStatusServerResponse(getForgedMOTD()));
+
+                // Custom logging based off port number.
+                //noinspection ExtractMethodRecommender
+                String reason = isInvalidPort
+                        ? "Invalid port used by client."
+                        : "Suspicious port used by client.";
+
+                // Custom logging based off the factor (suspicious port/bad handshake).
+                reason = badHandshake
+                        ? "Missing proper handshake."
+                        : reason;
+
+                // Custom logging based off if the protocol version is bad.
+                reason = isInvalidProtocol
+                        ? "Invalid protocol version."
+                        : reason;
+
+                // Log the violation, report the IP to CoralGate API, cancel the packet and send forged MOTD.
+                log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, reason, false);
 
             }
+
+            // Block further logic.
+            return;
+
+        }
+
+        // Ping to get the latency between the client and the server.
+        // Doesn't really expose any server information, but we'll keep it under control.
+        if (packetTypeCommon == PacketType.Status.Client.PING) {
+
+            final boolean badHandshake = this.connectionState.getOrDefault(inetSocketAddress, null) != PacketType.Handshaking.Client.HANDSHAKE;
+            final boolean sendForgedPong = isBadPacket || badHandshake;
+
+            // Either suspicious port or bad handshake.
+            if (sendForgedPong) {
+
+                // Send forged pong.
+                packetUser.sendPacketSilently(new WrapperStatusServerPong(new WrapperStatusClientPing(packetReceiveEvent).getTime()));
+
+                // Custom logging based off port number.
+                //noinspection ExtractMethodRecommender
+                String reason = isInvalidPort
+                        ? "Invalid port used by client."
+                        : "Suspicious port used by client.";
+
+                // Custom logging based off the factor (suspicious port/bad handshake).
+                reason = badHandshake
+                        ? "Missing proper handshake."
+                        : reason;
+
+                // Custom logging based off if the protocol version is bad.
+                reason = isInvalidProtocol
+                        ? "Invalid protocol version."
+                        : reason;
+
+                // Log the violation, report the IP to CoralGate API, cancel the packet and send forged pong.
+                log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, reason, false);
+
+            }
+
+            // Block further logic.
+            return;
+
+        }
+
+        // TODO: find some way to block this cuz PE ain't seeing the goddamn packet
+        // TODO: Netty pipeline injection?
+        // Legacy ping exposes information like MOTD, version & player count.
+        // No wrapper exists for it so we'll have to drop the packet.
+        if (packetTypeCommon == PacketType.Handshaking.Client.LEGACY_SERVER_LIST_PING) {
+
+            // Cancel the packet.
+            packetReceiveEvent.setCancelled(true);
+
+            // Block further logic.
+            return;
+
+        }
+
+        // Handle invalid port incoming connections.
+        if (isInvalidPort) {
+
+            // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+            log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Invalid port used by client.", true);
+
+            // Block further logic.
+            return;
+
+        }
+
+        // Login start procedure after handshake has been established.
+        if (packetTypeCommon == PacketType.Login.Client.LOGIN_START) {
+
+            // Validate state against certain conditions: previous HANDSHAKE.
+            // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+            verifyAndTransitionState(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, PacketType.Handshaking.Client.HANDSHAKE, packetTypeCommon, "Missing proper handshake.");
 
             final WrapperLoginClientLoginStart wrapperLoginClientLoginStart = new WrapperLoginClientLoginStart(packetReceiveEvent);
 
@@ -279,14 +290,9 @@ public class NetworkProcessor implements PacketListener {
             if (wrapperLoginClientLoginStart.getUsername().startsWith("Player")) {
 
                 // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-                logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Bot-like username pattern detected.");
-
-                // Block further logic.
-                return;
+                log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Bot-like username pattern detected.", true);
 
             }
-
-            this.connectionState.put(inetSocketAddress, packetTypeCommon);
 
             // Block further logic.
             return;
@@ -296,7 +302,7 @@ public class NetworkProcessor implements PacketListener {
         // After login start has passed and the server sent an encryption request. This is only for servers that are in online mode.
         if (packetTypeCommon == PacketType.Login.Client.ENCRYPTION_RESPONSE && this.corePlugin.isOnlineMode()) {
 
-            // Validate state against certain conditions: previous ENCRYPTION_REQUEST
+            // Validate state against certain conditions: previous ENCRYPTION_REQUEST.
             // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
             verifyAndTransitionState(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, PacketType.Login.Server.ENCRYPTION_REQUEST, packetTypeCommon, "Missing login start procedure.");
 
@@ -305,9 +311,10 @@ public class NetworkProcessor implements PacketListener {
 
         }
 
+        // The client acknowledging the server sent LOGIN_SUCCESS. This only applies for 1.20.2+ clients and 1.20.2+ servers (if using Via).
         if (packetTypeCommon == PacketType.Login.Client.LOGIN_SUCCESS_ACK) {
 
-            // Validate state against certain conditions: previous LOGIN_SUCCESS
+            // Validate state against certain conditions: previous LOGIN_SUCCESS.
             // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
             verifyAndTransitionState(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, PacketType.Login.Server.LOGIN_SUCCESS, packetTypeCommon, "Missing login success procedure.");
 
@@ -316,163 +323,22 @@ public class NetworkProcessor implements PacketListener {
 
         }
 
-        // Prior to 1.20.2 CLIENT_SETTINGS are sent via the PLAY state right after LOGIN_SUCCESS.
-        // On 1.20.2+, CLIENT_SETTINGS is sent exclusively via the CONFIGURATION state.
-        // This is exclusively used on < 1.20.2.
-        // Ignore the packet if the connection is already done. This can be triggered in game.
-        if (packetTypeCommon == PacketType.Play.Client.CLIENT_SETTINGS && this.connectionState.getOrDefault(inetSocketAddress, null) != PacketType.Play.Client.PLUGIN_MESSAGE) {
+        // Decide if we should use the new LOGIN_SUCCESS_ACK (1.20.2+) or the older LOGIN_SUCCESS (< 1.20.2).
+        // If we are on a backend, the server version is straight forward to get.
+        // However, if we're on a proxy, the server version is marked as 1.8 since it's the lowest Bungee supports (when it could be anything else).
+        // Therefore, we should base ourselves off the client's version ONLY if we are running on a proxy.
+        final boolean useLoginSuccessAck = PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_20_2)
+                || (this.corePlugin.getPlatformProperties().getProperty("platform-type").equals("proxy")
+                && packetUser.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_20_2));
 
-            final PacketTypeCommon expectedState = clientVersion.isOlderThan(ClientVersion.V_1_20_2)
-                    ? PacketType.Configuration.Client.CONFIGURATION_END_ACK
-                    : PacketType.Login.Server.LOGIN_SUCCESS;
+        final PacketTypeCommon expectedFinalState = useLoginSuccessAck
+                ? PacketType.Login.Client.LOGIN_SUCCESS_ACK
+                : PacketType.Login.Server.LOGIN_SUCCESS;
 
-            // Validate state against certain conditions: previous LOGIN_SUCCESS (< 1.20.2), Configuration.PLUGIN_MESSAGE (>= 1.20.2).
-            // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-            verifyAndTransitionState(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, expectedState, packetTypeCommon, "Missing login success procedure before client settings.");
-
-            final WrapperPlayClientSettings wrapperPlayClientSettings = new WrapperPlayClientSettings(packetReceiveEvent);
-
-            // If view distance exceeds minimum or maximum (vanilla).
-            if (wrapperPlayClientSettings.getViewDistance() < 2 || wrapperPlayClientSettings.getViewDistance() > 32)
-                logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Invalid view distance.");
-
-            // TODO: maybe go deeper in registries or more checks regarding settings?
-
-            // Block further logic.
-            return;
-
+        // Connection procedure is not done yet, block incoming packets.
+        if (this.connectionState.getOrDefault(inetSocketAddress, null) != expectedFinalState) {
+            log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Missing full connection procedure.", true);
         }
-
-        // Minecraft versions prior to 1.20.2 exclusively use PLUGIN_MESSAGE in the PLAY state.
-        // Versions from 1.20.2 and above first use PLUGIN_MESSAGE in the CONFIGURATION state to send the brand,
-        // then uses the PLAY state to send "minecraft:register".
-        if (packetTypeCommon == PacketType.Play.Client.PLUGIN_MESSAGE) {
-
-            final WrapperPlayClientPluginMessage wrapperPlayClientPluginMessage = new WrapperPlayClientPluginMessage(packetReceiveEvent);
-            final String channelName = wrapperPlayClientPluginMessage.getChannelName();
-
-            // Calculate expected state since 1.20.2+ also uses the CONFIGURATION state.
-            // On < 1.20.2, PLUGIN_MESSAGE is sent twice in a row, once for "minecraft:brand" and another "minecraft:register".
-            final PacketTypeCommon expectedState = clientVersion.isOlderThan(ClientVersion.V_1_20_2)
-                    ? channelName.equals("minecraft:register")
-                      ? PacketType.Play.Client.PLUGIN_MESSAGE
-                      : PacketType.Play.Client.CLIENT_SETTINGS
-                    : PacketType.Configuration.Client.CONFIGURATION_END_ACK;
-
-            // Validate state against certain conditions: previous Play.CLIENT_SETTINGS/Play.PLUGIN_MESSAGE (< 1.20.2), CONFIGURATION_END_ACK (>= 1.20.2).
-            // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-            verifyAndTransitionState(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, expectedState, packetTypeCommon, "Missing configuration before client brand.");
-
-            // Took from TotemGuard: https://github.com/Bram1903/TotemGuard/blob/main/src/main/java/com/deathmotion/totemguard/checks/impl/misc/ClientBrand.java
-            // All credits to Bram!
-            // Check client brand.
-            if (!channelName.equals("minecraft:brand") && !channelName.equals("MC|BRAND")) return;
-
-            final byte[] data = wrapperPlayClientPluginMessage.getData();
-
-            // Weird ahhhh brand, im not waisting my time on no namer brands.
-            if (data.length > 64 || data.length == 0)
-                logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Invalid client brand. (" + data.length + " bytes).");
-
-            final byte[] minusLength = new byte[data.length - 1];
-            System.arraycopy(data, 1, minusLength, 0, minusLength.length);
-            String clientBrand = new String(minusLength).replace(" (Velocity)", ""); // removes velocity's brand suffix
-            clientBrand = !clientBrand.isEmpty() ? Pattern.compile("(?i)" + '§' + "[0-9A-FK-ORX]").matcher(clientBrand).replaceAll("") : clientBrand;
-
-            // Special handling for lunar...
-            if (clientBrand.startsWith("lunarclient:")) clientBrand = "lunarclient";
-
-            if (!this.corePlugin.getConfigManager().getConfig().getAllowedClientBrands().contains(clientBrand))
-                logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Unauthorized client brand name (" +  clientBrand + ").");
-
-            // Block further logic.
-            return;
-
-        }
-
-        // Used exclusively on 1.20.2+, the client brand is sent here.
-        if (packetTypeCommon == PacketType.Configuration.Client.PLUGIN_MESSAGE) {
-
-            // Validate state against certain conditions: previous LOGIN_SUCCESS_ACK.
-            // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-            verifyAndTransitionState(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, PacketType.Configuration.Server.CONFIGURATION_END, packetTypeCommon, "Missing configuration end from server.");
-
-            // Took from TotemGuard: https://github.com/Bram1903/TotemGuard/blob/main/src/main/java/com/deathmotion/totemguard/checks/impl/misc/ClientBrand.java
-            // All credits to Bram!
-            // Check client brand.
-            final WrapperConfigClientPluginMessage wrapperConfigClientPluginMessage = new WrapperConfigClientPluginMessage(packetReceiveEvent);
-            final String channelName = wrapperConfigClientPluginMessage.getChannelName();
-
-            if (!channelName.equals("minecraft:brand") && !channelName.equals("MC|BRAND")) return;
-
-            final byte[] data = wrapperConfigClientPluginMessage.getData();
-
-            // Weird ahhhh brand, im not waisting my time on no namer brands.
-            if (data.length > 64 || data.length == 0)
-                logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Invalid client brand. (" + data.length + " bytes).");
-
-            final byte[] minusLength = new byte[data.length - 1];
-            System.arraycopy(data, 1, minusLength, 0, minusLength.length);
-            String clientBrand = new String(minusLength).replace(" (Velocity)", ""); // removes velocity's brand suffix
-            clientBrand = !clientBrand.isEmpty() ? Pattern.compile("(?i)" + '§' + "[0-9A-FK-ORX]").matcher(clientBrand).replaceAll("") : clientBrand;
-
-            // Special handling for lunar...
-            if (clientBrand.startsWith("lunarclient:")) clientBrand = "lunarclient";
-
-            if (!this.corePlugin.getConfigManager().getConfig().getAllowedClientBrands().contains(clientBrand))
-                logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Unauthorized client brand name (" +  clientBrand + ").");
-
-            // Block further logic.
-            return;
-
-        }
-
-        // Used exclusively on 1.20.2+.
-        if (packetTypeCommon == PacketType.Configuration.Client.CLIENT_SETTINGS) {
-
-            // Validate state against certain conditions: previous Configuration.PLUGIN_MESSAGE.
-            // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-            verifyAndTransitionState(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, PacketType.Configuration.Client.PLUGIN_MESSAGE, packetTypeCommon, "Missing client brand before client settings.");
-
-            final WrapperConfigClientSettings wrapperConfigClientSettings = new WrapperConfigClientSettings(packetReceiveEvent);
-
-            // If view distance exceeds minimum or maximum (vanilla).
-            if (wrapperConfigClientSettings.getViewDistance() < 2 || wrapperConfigClientSettings.getViewDistance() > 32)
-                logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Invalid view distance.");
-
-            // TODO: maybe go deeper in registries or more checks regarding settings?
-
-            // Block further logic.
-            return;
-
-        }
-
-        // Once CLIENT_SETTINGS and PLUGIN_MESSAGE are validated by the server.
-        if (packetTypeCommon == PacketType.Configuration.Client.CONFIGURATION_END_ACK) {
-
-            final PacketTypeCommon expectedState = clientVersion.isOlderThan(ClientVersion.V_1_20_2)
-                    ? PacketType.Configuration.Server.CONFIGURATION_END
-                    : PacketType.Configuration.Client.CLIENT_SETTINGS;
-
-            // Validate state against certain conditions: previous Configuration.CLIENT_SETTINGS.
-            // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-            verifyAndTransitionState(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, expectedState, packetTypeCommon, "Missing full client settings and client brand before finishing configuration.");
-
-            // Block further logic.
-            return;
-
-        }
-
-        // Get the proper login packet based off the client version.
-        final PacketTypeCommon currentState = this.connectionState.getOrDefault(inetSocketAddress, null);
-
-        // Directly evaluate if the current state is valid for this version context.
-        final boolean isValidState = clientVersion.isOlderThan(ClientVersion.V_1_20_2) && PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_20_2)
-                ? (currentState == PacketType.Configuration.Client.CONFIGURATION_END_ACK) || (currentState == PacketType.Play.Client.PLUGIN_MESSAGE) || (currentState == PacketType.Play.Client.CLIENT_SETTINGS)
-                : currentState == PacketType.Play.Client.PLUGIN_MESSAGE;
-
-        if (!isValidState)
-            logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Missing full connection procedure.");
 
         /* All checks passed! */
 
@@ -482,28 +348,19 @@ public class NetworkProcessor implements PacketListener {
     public void onPacketSend(final PacketSendEvent packetSendEvent) {
 
         final InetSocketAddress inetSocketAddress = packetSendEvent.getSocketAddress();
-        final String ipAddress = inetSocketAddress.getHostString();
 
         // Exempt local IP addresses according to configuration file.
-        if (this.corePlugin.getConfigManager().getConfig().isIgnoreLocalAddresses() && !this.corePlugin.isTestMode()) {
-
-            final InetAddress inetAddress = inetSocketAddress.getAddress();
-
-            if (inetAddress.isSiteLocalAddress() || inetAddress.isLoopbackAddress() || inetAddress.isLinkLocalAddress()) return;
-
+        if (exemptLocalIpAddress(inetSocketAddress)) {
+            return;
         }
 
+        final String ipAddress = inetSocketAddress.getHostString();
         final PacketTypeCommon packetTypeCommon = packetSendEvent.getPacketType();
 
-        System.out.println("S->C | " + packetTypeCommon);
-
-        /*
-        * PACKET ORDER FILTERING.
-        */
-
-        // Whitelisted MOTD related packets.
-        if (packetTypeCommon == PacketType.Status.Server.RESPONSE || packetTypeCommon == PacketType.Status.Server.PONG)
+        // Whitelisted packets.
+        if (packetTypeCommon == PacketType.Status.Server.RESPONSE || packetTypeCommon == PacketType.Status.Server.PONG) {
             return;
+        }
 
         // Client should have passed login start procedure.
         if (packetTypeCommon == PacketType.Login.Server.ENCRYPTION_REQUEST && this.corePlugin.isOnlineMode()) {
@@ -517,16 +374,23 @@ public class NetworkProcessor implements PacketListener {
 
         }
 
-        // Client should have sent the encryption response (if online mode). The compression level can be set to -1 (disabled) on proxies for less network/cpu overhead.
+        // Client should have sent the encryption response (if online mode).
+        // The compression level can be set to -1 (disabled) on proxies for less network/cpu overhead.
         if (packetTypeCommon == PacketType.Login.Server.SET_COMPRESSION && this.corePlugin.getCompressionThreshold() >= 0) {
 
+            // Offline servers do not have encryption, the previous packet is therefore simply LOGIN_START.
             final PacketTypeCommon requiredPacketTypeCommon = this.corePlugin.isOnlineMode()
                     ? PacketType.Login.Client.ENCRYPTION_RESPONSE
                     : PacketType.Login.Client.LOGIN_START;
 
+            // Determine proper message based off previous statement.
+            final String reason = requiredPacketTypeCommon == PacketType.Login.Client.ENCRYPTION_RESPONSE
+                    ? "encryption response."
+                    : "login start procedure.";
+
             // Validate state against certain conditions: previous ENCRYPTION_RESPONSE (if online mode) else LOGIN_START.
             // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-            verifyAndTransitionState(packetSendEvent, inetSocketAddress, ipAddress, packetTypeCommon, requiredPacketTypeCommon, packetTypeCommon, "Missing encryption response or login start procedure.");
+            verifyAndTransitionState(packetSendEvent, inetSocketAddress, ipAddress, packetTypeCommon, requiredPacketTypeCommon, packetTypeCommon, "Missing " + reason);
 
             // Block further logic.
             return;
@@ -535,9 +399,23 @@ public class NetworkProcessor implements PacketListener {
 
         if (packetTypeCommon == PacketType.Login.Server.LOGIN_SUCCESS) {
 
+            // If it's an online server with compression: SET_COMPRESSION.
+            // If it's an online server WITHOUT compression: ENCRYPTION_RESPONSE.
+            //noinspection ExtractMethodRecommender
+            final PacketTypeCommon onlineModePreviousStatus = this.corePlugin.getCompressionThreshold() >= 0
+                    ? PacketType.Login.Server.SET_COMPRESSION
+                    : PacketType.Login.Client.ENCRYPTION_RESPONSE;
+
+            // If it's an offline server with compression: SET_COMPRESSION.
+            // If it's an offline server WITHOUT compression: LOGIN_START.
+            final PacketTypeCommon offlineModePreviousStatus = this.corePlugin.getCompressionThreshold() >= 0
+                    ? PacketType.Login.Server.SET_COMPRESSION
+                    : PacketType.Login.Client.LOGIN_START;
+
+            // Choose required packet type based off previous statements.
             final PacketTypeCommon requiredPacketTypeCommon = this.corePlugin.isOnlineMode()
-                    ? (this.corePlugin.getCompressionThreshold() >= 0 ? PacketType.Login.Server.SET_COMPRESSION : PacketType.Login.Client.ENCRYPTION_RESPONSE)
-                    : (this.corePlugin.getCompressionThreshold() >= 0 ? PacketType.Login.Server.SET_COMPRESSION : PacketType.Login.Client.LOGIN_START);
+                    ? onlineModePreviousStatus
+                    : offlineModePreviousStatus;
 
             // Validate state against certain conditions: previous SET_COMPRESSION (if above 0) else ENCRYPTION_RESPONSE (if online mode) else LOGIN_START.
             // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
@@ -548,29 +426,61 @@ public class NetworkProcessor implements PacketListener {
 
         }
 
-        // Sent after the server is done sending basic server data.
-        // Right before the client starts sending its own client data.
-        if (packetTypeCommon == PacketType.Configuration.Server.CONFIGURATION_END) {
+        // Fired when a connection is closed.
+        if (packetTypeCommon == PacketType.Login.Server.DISCONNECT) {
 
-            // Validate state against certain conditions: previous LOGIN_SUCCESS_ACK.
-            // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-            verifyAndTransitionState(packetSendEvent, inetSocketAddress, ipAddress, packetTypeCommon, PacketType.Login.Client.LOGIN_SUCCESS_ACK, packetTypeCommon, "Missing set compression procedure.");
+            final WrapperLoginServerDisconnect wrapperLoginServerDisconnect = new WrapperLoginServerDisconnect(packetSendEvent);
+
+            final Component disconnectReason = wrapperLoginServerDisconnect.getReason();
+            final String serverVersion = PacketEvents.getAPI().getServerManager().getVersion().getReleaseName();
+
+            if (disconnectReason instanceof TextComponent) {
+
+                final TextComponent disconnectReasonTextComponent = (TextComponent) disconnectReason;
+                final String disconnectReasonString = disconnectReasonTextComponent.content();
+
+                // Intercept "Outdated server! I'm still on X.XX.X" messages to not show the server's version.
+                if (disconnectReasonString.contains(serverVersion)) {
+
+                    // Replace the real server's version by the spoofed one.
+                    final String newDisconnectReason = disconnectReasonString.replace(serverVersion, "26.2");
+
+                    // Reconstruct reason with spoofed server version.
+                    final Component safeDisconnectReason = Component.text()
+                            .content(newDisconnectReason)
+                            .style(disconnectReasonTextComponent.style())
+                            .build();
+
+                    // Set the new reason and tell packetevents to re-encode the packet and send it.
+                    wrapperLoginServerDisconnect.setReason(safeDisconnectReason);
+
+                    packetSendEvent.markForReEncode(true);
+
+                }
+
+            }
 
             // Block further logic.
             return;
 
         }
 
-        // Get the proper login packet based off the client version.
-        final PacketTypeCommon currentState = this.connectionState.getOrDefault(inetSocketAddress, null);
+        // Decide if we should use the new LOGIN_SUCCESS_ACK (1.20.2+) or the older LOGIN_SUCCESS (< 1.20.2).
+        // If we are on a backend, the server version is straight forward to get.
+        // However, if we're on a proxy, the server version is marked as 1.8 since it's the lowest Bungee supports (when it could be anything else).
+        // Therefore, we should base ourselves off the client's version ONLY if we are running on a proxy.
+        final boolean useLoginSuccessAck = PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_20_2)
+                || (this.corePlugin.getPlatformProperties().getProperty("platform-type").equals("proxy")
+                && packetSendEvent.getUser().getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_20_2));
 
-        // Directly evaluate if the current state is valid for this version context.
-        final boolean isValidState = packetSendEvent.getUser().getClientVersion().isOlderThan(ClientVersion.V_1_20_2) && PacketEvents.getAPI().getServerManager().getVersion().isOlderThan(ServerVersion.V_1_20_2)
-                ? (currentState == PacketType.Login.Server.LOGIN_SUCCESS || currentState == PacketType.Play.Client.PLUGIN_MESSAGE)
-                : (currentState == PacketType.Login.Client.LOGIN_SUCCESS_ACK || currentState == PacketType.Configuration.Client.CONFIGURATION_END_ACK || currentState == PacketType.Play.Client.PLUGIN_MESSAGE);
+        final PacketTypeCommon expectedFinalState = useLoginSuccessAck
+                ? PacketType.Login.Client.LOGIN_SUCCESS_ACK
+                : PacketType.Login.Server.LOGIN_SUCCESS;
 
-       if (!isValidState)
-           logAndClose(packetSendEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Missing full connection procedure.");
+        // Connection procedure is not done yet, block incoming packets.
+        if (this.connectionState.getOrDefault(inetSocketAddress, null) != expectedFinalState) {
+            log(packetSendEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Missing full connection procedure.");
+        }
 
         /* All checks passed! */
 
@@ -580,30 +490,48 @@ public class NetworkProcessor implements PacketListener {
     public void onUserDisconnect(final UserDisconnectEvent userDisconnectEvent) {
 
         final User user = userDisconnectEvent.getUser();
-
-        if (user == null || user.getUUID() == null) return;
+        //noinspection ConstantValue
+        if (user == null || user.getAddress() == null) {
+            return;
+        }
 
         // Clean up.
         this.connectionState.remove(user.getAddress());
 
     }
 
-    private void logAndClose(final PacketReceiveEvent packetReceiveEvent, final InetSocketAddress inetSocketAddress, final String ipAddress, final PacketTypeCommon packetTypeCommon, final String reason) {
+    private void log(final PacketReceiveEvent packetReceiveEvent, final InetSocketAddress inetSocketAddress, final String ipAddress, final PacketTypeCommon packetTypeCommon, final String reason, final boolean closeConnection) {
 
-        CorePlugin.getLogger().severe(reason + " Closing connection from " + inetSocketAddress + ". [C->S | " + packetReceiveEvent.getPacketType().getClass().getDeclaringClass().getSimpleName() + "." + packetTypeCommon.getName() + "]");
+        final String messageComplement = closeConnection
+                ? " Closing connection from "
+                : " Dropping packet from ";
+
+        // Log based if the connection should be closed or not.
+        if (closeConnection) {
+            CorePlugin.getLogger().severe(reason + messageComplement + inetSocketAddress + ". [C->S | " + packetReceiveEvent.getPacketType().getClass().getDeclaringClass().getSimpleName() + "." + packetTypeCommon.getName() + "]");
+        } else {
+            CorePlugin.getLogger().warning(reason + messageComplement + inetSocketAddress + ". [C->S | " + packetReceiveEvent.getPacketType().getClass().getDeclaringClass().getSimpleName() + "." + packetTypeCommon.getName() + "]");
+        }
+
+        // Report IP to CoralGate's API.
         this.corePlugin.getApiManager().reportIp(ipAddress);
 
         packetReceiveEvent.setCancelled(true);
-        packetReceiveEvent.getUser().closeConnection();
+        if (closeConnection) {
+            packetReceiveEvent.getUser().closeConnection();
+        }
 
         // Clean up.
         this.connectionState.remove(inetSocketAddress);
 
     }
 
-    private void logAndClose(final PacketSendEvent packetSendEvent, final InetSocketAddress inetSocketAddress, final String ipAddress, final PacketTypeCommon packetTypeCommon, final String reason) {
+    private void log(final PacketSendEvent packetSendEvent, final InetSocketAddress inetSocketAddress, final String ipAddress, final PacketTypeCommon packetTypeCommon, final String reason) {
 
+        // Log based if the connection should be closed or not.
         CorePlugin.getLogger().severe(reason + " Closing connection from " + inetSocketAddress + ". [S->C | " + packetSendEvent.getPacketType().getClass().getDeclaringClass().getSimpleName() + "." + packetTypeCommon.getName() + "]");
+
+        // Report IP to CoralGate's API.
         this.corePlugin.getApiManager().reportIp(ipAddress);
 
         packetSendEvent.setCancelled(true);
@@ -620,7 +548,11 @@ public class NetworkProcessor implements PacketListener {
 
             this.connectionState.put(inetSocketAddress, targetState);
 
-        } else logAndClose(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, reason);
+        } else {
+
+            log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, reason, true);
+
+        }
 
     }
 
@@ -630,12 +562,30 @@ public class NetworkProcessor implements PacketListener {
 
             this.connectionState.put(inetSocketAddress, targetState);
 
-        } else logAndClose(packetSendEvent, inetSocketAddress, ipAddress, packetTypeCommon, reason);
+        } else {
+
+            log(packetSendEvent, inetSocketAddress, ipAddress, packetTypeCommon, reason);
+
+        }
 
     }
 
     private String getForgedMOTD() {
-        return "{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"CraftBukkit 26.2\",\"protocol\":776},\"enforcesSecureChat\":true}";
+        return "{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"Paper 26.2\",\"protocol\":776},\"enforcesSecureChat\":true}";
+    }
+
+    private boolean exemptLocalIpAddress(final InetSocketAddress inetSocketAddress) {
+
+        // Exempt local IP addresses according to configuration file.
+        if (this.corePlugin.getConfigManager().getConfig().isIgnoreLocalAddresses() && !this.corePlugin.isTestMode()) {
+
+            final InetAddress inetAddress = inetSocketAddress.getAddress();
+            return inetAddress.isSiteLocalAddress() || inetAddress.isLoopbackAddress() || inetAddress.isLinkLocalAddress();
+
+        }
+
+        return false;
+
     }
 
 }
