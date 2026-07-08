@@ -195,14 +195,23 @@ public final class Main {
             sendPacket(s, 0x00, buildHandshake(PROTOCOL, HOST, PORT, 2));
             sendPacket(s, 0x00, buildLoginStart("Player" + System.currentTimeMillis() % 1000));
             RawPacket resp = tryReceive(s, TIMEOUT_MS);
+
             if (resp == null) {
-                return Outcome.pass("Connection closed after bot-like username, as expected.");
+                return Outcome.fail("Connection closed abruptly with no data, expected a forged disconnect reason packet.");
             }
-            // A disconnect packet before login success also counts as correctly caught.
+
+            if (resp.id == 0x00) { // Disconnect Packet ID
+                String message = readString(new ByteArrayInputStream(resp.data));
+                if (message.contains("26.2")) {
+                    return Outcome.pass("Bot rejected with expected forged string. Decoded text: \"" + message + "\"");
+                }
+                return Outcome.fail("Bot disconnected, but reason did not match forged version '26.2'! Got: \"" + message + "\"");
+            }
+
             return Outcome.fail("Bot-like username was not rejected! got packet id=" + resp.id
                     + " data=" + truncate(bytesToHex(resp.data)));
         } catch (IOException e) {
-            return Outcome.pass("Connection closed/reset after bot-like username, as expected (" + e + ").");
+            return Outcome.fail("Connection threw unexpected exception instead of offering packet validation: " + e);
         }
     }
 
@@ -231,13 +240,23 @@ public final class Main {
             sendPacket(s, 0x00, buildHandshake(PROTOCOL, HOST, PORT, 2));
             sendPacket(s, 0x00, buildLoginStart("Player_Bot"));
             RawPacket resp = tryReceive(s, TIMEOUT_MS);
+
             if (resp == null) {
-                return Outcome.pass("Connection closed after bot-like username on a legit port, as expected.");
+                return Outcome.fail("Connection closed abruptly with no data, expected a forged disconnect reason packet.");
             }
+
+            if (resp.id == 0x00) { // Disconnect Packet ID
+                String message = readString(new ByteArrayInputStream(resp.data));
+                if (message.contains("26.2")) {
+                    return Outcome.pass("Bot rejected with expected forged string on legit port. Decoded text: \"" + message + "\"");
+                }
+                return Outcome.fail("Bot disconnected, but reason did not match forged version '26.2'! Got: \"" + message + "\"");
+            }
+
             return Outcome.fail("Bot-like username was NOT rejected even on a legit port! got packet id="
                     + resp.id + " data=" + truncate(bytesToHex(resp.data)));
         } catch (IOException e) {
-            return Outcome.pass("Connection closed/reset after bot-like username, as expected (" + e + ").");
+            return Outcome.fail("Connection threw unexpected exception instead of offering packet validation: " + e);
         }
     }
 
