@@ -35,6 +35,7 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import org.bstats.velocity.Metrics;
 import revxrsal.commands.Lamp;
 import revxrsal.commands.velocity.VelocityLamp;
+import revxrsal.commands.velocity.VelocityVisitors;
 import revxrsal.commands.velocity.actor.VelocityCommandActor;
 
 import java.nio.file.Path;
@@ -42,27 +43,27 @@ import java.util.logging.Logger;
 
 public final class VelocityPlugin {
 
-    private final Metrics.Factory metricsFactory;
+    private final CorePlugin corePlugin = new CorePlugin();
 
     private final Path dataDirectory;
+    private final Metrics.Factory metricsFactory;
 
     @Inject
-    public VelocityPlugin(final ProxyServer server, final @DataDirectory Path dataDirectory, final Metrics.Factory metricsFactory) {
+    public VelocityPlugin(final ProxyServer proxyServer, final @DataDirectory Path dataDirectory, final Metrics.Factory metricsFactory) {
 
         this.dataDirectory = dataDirectory;
+        // Load bStats metrics factory.
+        this.metricsFactory = metricsFactory;
 
         // Load commands.
-        final Lamp<VelocityCommandActor> lamp = VelocityLamp.builder(this, server)
+        final Lamp<VelocityCommandActor> lamp = VelocityLamp.builder(this, proxyServer)
                 .permissionFactory(new PermissionFactory(new VelocityPermissionChecker()))
                 .build();
         lamp.register(new CoralGateCommand(this.corePlugin));
 
-        // Load bStats metrics factory.
-        this.metricsFactory = metricsFactory;
+        lamp.accept(VelocityVisitors.brigadier(proxyServer));
 
     }
-
-    private final CorePlugin corePlugin = new CorePlugin();
 
     @Subscribe
     public void onProxyInitialization(final ProxyInitializeEvent proxyInitializeEvent) {
