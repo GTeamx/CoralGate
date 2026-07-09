@@ -1,6 +1,6 @@
 name: CoralGate
 version: "${version}"
-main: cloud.gteam.coralgate.PaperPlugin
+main: cloud.gteam.coralgate.SpigotPlugin
 api-version: '1.19'
 prefix: CoralGate
 load: STARTUP

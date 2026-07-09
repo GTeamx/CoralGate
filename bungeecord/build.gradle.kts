@@ -1,7 +1,7 @@
 plugins {
 
     `java-library`
-    id("com.gradleup.shadow") version "9.5.1"
+    alias(libs.plugins.shadow)
 
 }
 
@@ -31,18 +31,13 @@ repositories {
 
 dependencies {
 
-    // Get versions.
-    val lampVersion: String by rootProject.extra
-    val packetEventsVersion: String by rootProject.extra
-    val bstatsVersion: String by rootProject.extra
-
     // Dependencies.
-    implementation("org.bstats:bstats-bungeecord:$bstatsVersion")
-    implementation("io.github.revxrsal:lamp.common:$lampVersion")
-    implementation("io.github.revxrsal:lamp.bungee:$lampVersion")
+    implementation(libs.bstats.bungeecord)
+    implementation(libs.lamp.common)
+    implementation(libs.lamp.bungee)
 
-    compileOnly("com.github.retrooper:packetevents-bungeecord:$packetEventsVersion")
-    compileOnly("net.md-5:bungeecord-api:1.16-R0.4")
+    compileOnly(libs.packetevents.bungeecord)
+    compileOnly(libs.bungeecord.api)
 
     // Core implementation.
     implementation(project(path = ":core", configuration = "shadow"))
@@ -51,37 +46,25 @@ dependencies {
 
 tasks.processResources {
 
-    // Get versions.
-    val packetEventsVersion: String by rootProject.extra
-    val coreVersion: String by rootProject.extra
-
-    // Replace bungee.yml
-    filesMatching("bungee.yml") {
-        expand("version" to project.version)
-    }
+    inputs.property("name", project.name)
+    inputs.property("version", project.version)
+    inputs.property("coreVersion", libs.versions.coreVersion.get())
+    inputs.property("packeteventsVersion", libs.versions.packetevents.get())
 
     // Replace properties.
-    filesMatching("platform.properties") {
-
-        expand(
-            "name" to project.name,
-            "version" to project.version,
-            "coreVersion" to coreVersion,
-            "packeteventsVersion" to packetEventsVersion
-        )
-
+    filesMatching(listOf("bungee.yml", "platform.properties")) {
+        expand(inputs.properties)
     }
-
 }
 
 tasks.shadowJar {
 
     // Wait for the core shadowJar to finish.
-    dependsOn(project(":core").tasks.named("shadowJar"))
+    dependsOn(":core:shadowJar")
 
-    archiveBaseName.set("CoralGate-Bungeecord")
-    archiveVersion.set(project.version.toString())
-    archiveClassifier.set("")
+    archiveBaseName = "CoralGate-Bungeecord"
+    archiveVersion = project.version.toString()
+    archiveClassifier = ""
 
     // Relocate bStats.
     relocate("org.bstats", "cloud.gteam.coralgate.libs.bstats")
