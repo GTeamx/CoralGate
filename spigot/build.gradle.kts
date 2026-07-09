@@ -55,7 +55,7 @@ tasks.processResources {
     inputs.property("packeteventsVersion", libs.versions.packetevents.get())
 
     // Replaces placeholders in BOTH yml files.
-    filesMatching(listOf("plugin.yml", "paper-plugin.yml")) {
+    filesMatching(listOf("plugin.yml", "paper-plugin.yml", "platform.properties")) {
         expand(inputs.properties)
     }
 
