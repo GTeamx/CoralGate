@@ -57,7 +57,6 @@ public class CoralGateCommand {
         actor.sendRawMessage("");
         actor.sendRawMessage(" - /coralgate§8|cg§r help §7- Show this menu.");
         actor.sendRawMessage(" - /coralgate§8|cg§r version§8|ver§r §7- Show versions.");
-        actor.sendRawMessage(" - /coralgate§8|cg§r config§8|cfg§r reload§8|rl§r §7- Reload the config.");
         actor.sendRawMessage("");
         actor.sendRawMessage("§bHaving troubles ? Need help ? Found a bug ?");
         actor.sendRawMessage("§7Join our Discord: §bhttps://discord.gteam.cloud");
@@ -98,33 +97,6 @@ public class CoralGateCommand {
         actor.sendRawMessage("§7packetevents version: " + (PacketEvents.getAPI().getVersion().toString().equals(this.corePlugin.getPlatformProperties().getProperty("packetevents-version")) ? "§a" : "§e") + this.corePlugin.getPlatformProperties().getProperty("packetevents-version"));
         actor.sendRawMessage("");
         actor.sendRawMessage("§7-----------------------------------------------------");
-
-    }
-
-    // /coralgate|cg config|cfg reload|rl.
-    @Subcommand({"config reload", "config rl", "cfg reload", "cfg rl"})
-    @Description("Reload the configuration file of CoralGate.")
-    @CommandPermission("coralgate.commands.config.reload")
-    public void configReload(final CommandActor actor) {
-
-        final ConfigManager configManager = this.corePlugin.getConfigManager();
-        ConfigModel config = configManager.getConfig();
-
-        actor.sendRawMessage(config.getNormalPrefix() + "Reloading configuration file...");
-
-        // Get latest config version.
-        final String latestConfigVersion = this.corePlugin.getConfigManager().getLatestConfigVersion();
-
-        configManager.load();
-        // Update config with latest load.
-        config = configManager.getConfig();
-
-        // Compare current config version and latest version and alert the user if necessary.
-        if (!Objects.equals(latestConfigVersion, config.getConfigVersion())) {
-            actor.sendRawMessage(config.getWarningPrefix() + "Please consider upgrading your configuration file to the latest version: '" + latestConfigVersion + "'. Your configuration file is at version '" + config.getConfigVersion() + "'.");
-        }
-
-        actor.sendRawMessage(config.getNormalPrefix() + "Configuration file reloaded!");
 
     }
 
