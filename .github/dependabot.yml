@@ -19,5 +19,5 @@ updates:
       - dependency-name: "org.asynchttpclient:async-http-client"
         versions: [">= 3.0.0"]
       # Only allow 4.x.x updates for kyori adventure api.
-      - dependency-name: "org.asynchttpclient:async-http-client"
+      - dependency-name: "net.kyori:adventure-api"
         versions: [">= 5.0.0"]  
