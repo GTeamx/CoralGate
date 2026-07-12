@@ -67,7 +67,8 @@ public final class Main {
     private static final int INVALID_LOCAL_PORT     = 10000;
 
     // Fingerprint of NetworkProcessor#getForgedMOTD()
-    private static final String FORGED_MARKER_1 = "Paper 26.2";
+    private static final String FORGED_VERSION = "26.2";
+    private static final String FORGED_MARKER_1 = "Paper " + FORGED_VERSION;
     private static final String FORGED_MARKER_2 = "\"protocol\":776";
     private static final String FORGED_MARKER_3 = "\"enforcesSecureChat\":true";
 
@@ -204,10 +205,10 @@ public final class Main {
 
             if (resp.id == 0x00) { // Disconnect Packet ID
                 String message = readString(new ByteArrayInputStream(resp.data));
-                if (message.contains("26.2")) {
+                if (message.contains(FORGED_VERSION)) {
                     return Outcome.pass("Bot rejected with expected forged string. Decoded text: \"" + message + "\"");
                 }
-                return Outcome.fail("Bot disconnected, but reason did not match forged version '26.2'! Got: \"" + message + "\"");
+                return Outcome.fail("Bot disconnected, but reason did not match forged version '" + FORGED_VERSION + "'! Got: \"" + message + "\"");
             }
 
             return Outcome.fail("Bot-like username was not rejected! got packet id=" + resp.id
@@ -249,10 +250,10 @@ public final class Main {
 
             if (resp.id == 0x00) { // Disconnect Packet ID
                 String message = readString(new ByteArrayInputStream(resp.data));
-                if (message.contains("26.2")) {
+                if (message.contains(FORGED_VERSION)) {
                     return Outcome.pass("Bot rejected with expected forged string on legit port. Decoded text: \"" + message + "\"");
                 }
-                return Outcome.fail("Bot disconnected, but reason did not match forged version '26.2'! Got: \"" + message + "\"");
+                return Outcome.fail("Bot disconnected, but reason did not match forged version '" + FORGED_VERSION + "'! Got: \"" + message + "\"");
             }
 
             return Outcome.fail("Bot-like username was NOT rejected even on a legit port! got packet id="
