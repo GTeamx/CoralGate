@@ -39,7 +39,7 @@ public class VelocityInjector {
     public static String DECODER_NAME = "cg-decoder";
 
     private static Class<?> CONNECTION_MANAGER_CLASS, SERVER_INITIALIZER_HOLDER_CLASS;
-    private static Method SET_SERVER_INTIIALIZER;
+    private static Method SET_SERVER_INITIALIZER;
 
     public boolean hasInjected = false;
 
@@ -53,13 +53,13 @@ public class VelocityInjector {
         if (CONNECTION_MANAGER_CLASS == null) {
             CONNECTION_MANAGER_CLASS = Reflection.getClassByNameWithoutException("com.velocitypowered.proxy.network.ConnectionManager");
             SERVER_INITIALIZER_HOLDER_CLASS = Reflection.getClassByNameWithoutException("com.velocitypowered.proxy.network.ServerChannelInitializerHolder");
-            SET_SERVER_INTIIALIZER = Reflection.getMethod(SERVER_INITIALIZER_HOLDER_CLASS, 0, ChannelInitializer.class);
+            SET_SERVER_INITIALIZER = Reflection.getMethod(SERVER_INITIALIZER_HOLDER_CLASS, 0, ChannelInitializer.class);
         }
         Supplier<ChannelInitializer<Channel>> initializerHolder = getServerChannelInitializerHolder();
         ChannelInitializer<Channel> wrappedProxyInitializer = initializerHolder.get();
         VelocityChannelInitializer initializer = new VelocityChannelInitializer(wrappedProxyInitializer);
         try {
-            SET_SERVER_INTIIALIZER.invoke(initializerHolder, initializer);
+            SET_SERVER_INITIALIZER.invoke(initializerHolder, initializer);
             hasInjected = true;
         } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
@@ -71,7 +71,7 @@ public class VelocityInjector {
         ChannelInitializer<?> wrapper = holder.get();
         CheckedConsumer<ChannelInitializer<Channel>, ReflectiveOperationException> uninjector = (initializer) -> {
             CorePlugin.getLogger().info("Uninjecting from Velocity channel initializer...");
-            SET_SERVER_INTIIALIZER.invoke(holder, initializer);
+            SET_SERVER_INITIALIZER.invoke(holder, initializer);
         };
 
         try {
