@@ -121,15 +121,15 @@ public class NetworkProcessor implements PacketListener {
 
             this.connectionState.put(inetSocketAddress, packetTypeCommon);
 
+            // Forcefully check the IP so it can receive the real MOTD next time (if it's legit/safe).
+            // This also allows us to "pre cache" when the client will actually join the server.
+            this.corePlugin.getApiManager().checkIp(ipAddress);
+
             final WrapperHandshakingClientHandshake wrapperHandshakingClientHandshake = new WrapperHandshakingClientHandshake(packetReceiveEvent);
 
             // Drop the packet if it's suspicious and if it's a STATUS packet.
             if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.STATUS
                     && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.STATUS) {
-
-                // Forcefully check the IP so it can receive the real MOTD next time (if it's legit/safe).
-                // This also allows us to "pre cache" when the client will actually join the server.
-                this.corePlugin.getApiManager().checkIp(ipAddress);
 
                 if (isBadPacket) {
 
@@ -303,7 +303,13 @@ public class NetworkProcessor implements PacketListener {
             if (!this.corePlugin.getConfigManager().getConfig().isApiHealthCheck() || this.corePlugin.getApiManager().isHealthy()) {
 
                 // Cancel the packet to send it later.
-                packetReceiveEvent.setCancelled(true);
+                // This dynamic 'cancel and send later' method only works on Spigot/Paper. It doesn't work on Proxies.
+                // We'll just need to pre-cache the API results in advance (HANDSHAKE, REQUEST, PING).
+                // This will cause players not be able to seemlessly connect and will cause "Diconnected." messages...
+                // TODO: find better solution
+                if (!this.corePlugin.getPlatformProperties().getProperty("platform-type").equals("proxy")) {
+                    packetReceiveEvent.setCancelled(true);
+                }
 
                 // Cache wrapper and data to reconstruct and send it back later.
                 final WrapperLoginClientLoginStart wrapperLoginClientLoginStart = new WrapperLoginClientLoginStart(packetReceiveEvent);
@@ -331,7 +337,7 @@ public class NetworkProcessor implements PacketListener {
                         // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
                         log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "IP is blocked by the API.", true);
 
-                    } else {
+                    } else if (!this.corePlugin.getPlatformProperties().getProperty("platform-type").equals("proxy")) { // TODO: same problem describe above...
 
                         // Process the packet again, the player is verified by the API.
                         packetUser.receivePacketSilently(new WrapperLoginClientLoginStart(wrapperLoginClientLoginStart.getClientVersion(), username, wrapperLoginClientLoginStart.getSignatureData().orElse(null), wrapperLoginClientLoginStart.getPlayerUUID().orElse(null)));
@@ -619,7 +625,7 @@ public class NetworkProcessor implements PacketListener {
     }
 
     private String getForgedMOTD() {
-        return "{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"Paper 1.21.11\",\"protocol\":776},\"enforcesSecureChat\":true}";
+        return "{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"Paper 1.21.11\",\"protocol\":774},\"enforcesSecureChat\":true}";
     }
 
     private boolean exemptLocalIpAddress(final InetSocketAddress inetSocketAddress) {
