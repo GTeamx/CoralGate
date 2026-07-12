@@ -61,47 +61,48 @@ public class APIManager {
         this.jankson = Jankson.builder().build();
     }
 
-    public boolean isIpBlocked(final String ipAddress) {
+    public CompletableFuture<Boolean> isIpBlocked(final String ipAddress) {
 
         // Get IP from cache before fetching from API.
         final CacheEntry entry = this.ipCache.get(ipAddress);
 
         // Serve cache if available.
         if (entry != null && !entry.isExpired(this.cacheTime)) {
-            return entry.isBlocked();
+            return CompletableFuture.completedFuture(entry.isBlocked());
         }
 
-        // Cache not available, fetch from API synchronously.
-        boolean result = fetchFromApi(ipAddress);
-
-        if (this.corePlugin.getConfigManager().getConfig().isAllowApiUsage()) {
-            this.ipCache.put(ipAddress, new CacheEntry(result));
-        }
-
-        return result;
+        // Cache not available, fetch from API.
+        return fetchFromApi(ipAddress).thenApply(result -> {
+            if (this.corePlugin.getConfigManager().getConfig().isAllowApiUsage()) this.ipCache.put(ipAddress, new CacheEntry(result));
+            return result;
+        });
 
     }
 
-    public boolean isIpBlockedCache(final String ipAddress) {
+    public boolean isIpCached(final String ipAddress) {
         final CacheEntry entry = this.ipCache.get(ipAddress);
-        return entry != null && !entry.isExpired(this.cacheTime) && !entry.isBlocked();
+        return entry != null && entry.isExpired(this.cacheTime);
+    }
+
+    public boolean isIpCachedBlocked(final String ipAddress) {
+        return isIpCached(ipAddress) && this.ipCache.get(ipAddress).isBlocked();
     }
 
     public void reportIp(final String ipAddress) {
         fetchFromApi(ipAddress);
     }
 
-    private boolean fetchFromApi(final String ipAddress) {
+    private CompletableFuture<Boolean> fetchFromApi(final String ipAddress) {
 
         if (!this.corePlugin.getConfigManager().getConfig().isAllowApiUsage()) {
-            return false; // Not blocked.
+            return CompletableFuture.completedFuture(false); // Not blocked.
         }
 
         try {
 
             final InetAddress inetAddress = InetAddress.getByName(ipAddress);
             if (inetAddress.isSiteLocalAddress() || inetAddress.isLoopbackAddress() || inetAddress.isLinkLocalAddress()) {
-                return false; // Not blocked.
+                return CompletableFuture.completedFuture(false); // Not blocked.
             }
 
         } catch (final UnknownHostException e) {
@@ -110,7 +111,7 @@ public class APIManager {
             this.healthStatus = false;
 
             // Not blocked.
-            return false;
+            return CompletableFuture.completedFuture(false);
 
         }
 
@@ -129,7 +130,7 @@ public class APIManager {
         this.pendingFutures.add(future);
         future.whenComplete((res, exception) -> this.pendingFutures.remove(future));
 
-        return future.join();
+        return future;
 
     }
 
