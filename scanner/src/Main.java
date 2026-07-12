@@ -123,10 +123,10 @@ public final class Main {
             boolean pingOk = pongPayload == pingPayload;
 
             String info = describeMotd(json);
-            if (!forged && pingOk) {
-                return Outcome.pass("Real server data received as expected. " + info);
+            if (forged && pingOk) {
+                return Outcome.pass("Forged server data received as expected. " + info);
             }
-            return Outcome.fail("Legit traffic was treated as suspicious! forgedMotd=" + forged
+            return Outcome.fail("Legit traffic wasn't sent forged motd on first request! motd=" + forged
                     + " pingEchoOk=" + pingOk + " raw=" + truncate(json));
         } catch (IOException e) {
             return Outcome.fail("Legit connection was unexpectedly blocked/closed: " + e);
