@@ -32,6 +32,8 @@ import revxrsal.commands.Lamp;
 import revxrsal.commands.bukkit.BukkitLamp;
 import revxrsal.commands.bukkit.actor.BukkitCommandActor;
 
+import java.util.Properties;
+
 public final class SpigotPlugin extends JavaPlugin {
 
     private final CorePlugin corePlugin = new CorePlugin();
@@ -48,8 +50,20 @@ public final class SpigotPlugin extends JavaPlugin {
         // Start bStats.
         new Metrics(this, 29439);
 
+        // Get properties early to modify the platform name later on if needed.
+        final Properties platformProperties = PlatformUtils.loadProperties(this.getClass());
+
+        // Paper's bootstrapper context class is only present when loaded via paper-plugin.yml
+        // If it exists we're running as 'paper'.
+        try {
+
+            Class.forName("io.papermc.paper.plugin.bootstrap.BootstrapContext");
+            platformProperties.setProperty("platform-name", "paper");
+
+        } catch (final ClassNotFoundException ignored) {}
+
         // Load core.
-        this.corePlugin.onEnable(this.getLogger(), getDataFolder(), Bukkit.getOnlineMode(), "server.properties", PlatformUtils.loadProperties(this.getClass()));
+        this.corePlugin.onEnable(this.getLogger(), getDataFolder(), Bukkit.getOnlineMode(), "server.properties", platformProperties);
 
         // Load commands.
         final Lamp<BukkitCommandActor> bukkitCommandActor = BukkitLamp.builder(this)
