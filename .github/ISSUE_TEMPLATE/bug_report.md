@@ -25,7 +25,7 @@ A clear and concise description of what you expected to happen.
  - OS: [e.g. Windows Server 2022, Ubuntu 22.04]
  - Platform: [e.g. spigot, paper, bungeecord, velocity]
  - CoralGate version: [e.g. 0.3.1-rc]
-- packetevents version: [e.g. 2.13.0]
+ - packetevents version: [e.g. 2.13.0]
 
 **Additional context**
 Add any other context about the problem here.
