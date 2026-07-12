@@ -73,8 +73,13 @@ public class APIManager {
 
         // Cache not available, fetch from API.
         return fetchFromApi(ipAddress).thenApply(result -> {
-            if (this.corePlugin.getConfigManager().getConfig().isAllowApiUsage()) this.ipCache.put(ipAddress, new CacheEntry(result));
+
+            if (this.corePlugin.getConfigManager().getConfig().isAllowApiUsage()) {
+                this.ipCache.put(ipAddress, new CacheEntry(result));
+            }
+
             return result;
+
         });
 
     }
@@ -88,8 +93,16 @@ public class APIManager {
         return isIpCached(ipAddress) && this.ipCache.get(ipAddress).isBlocked();
     }
 
-    public void reportIp(final String ipAddress) {
-        fetchFromApi(ipAddress);
+    public void checkIp(final String ipAddress) {
+        fetchFromApi(ipAddress).thenApply(result -> {
+
+            if (this.corePlugin.getConfigManager().getConfig().isAllowApiUsage()) {
+                this.ipCache.put(ipAddress, new CacheEntry(result));
+            }
+
+            return null;
+
+        });
     }
 
     private CompletableFuture<Boolean> fetchFromApi(final String ipAddress) {
