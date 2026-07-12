@@ -27,6 +27,7 @@ import com.github.retrooper.packetevents.PacketEvents;
 import java.io.File;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 public final class CorePlugin {
@@ -105,6 +106,8 @@ public final class CorePlugin {
             logger.info("API loading skipped (disabled by config).");
         }
 
+        logger.info("Reading online-mode and compression threshold...");
+
         this.onlineMode = onlineMode;
 
         this.compressionThreshold = ConfigUtils.getCompressionThreshold(configFileName);
@@ -113,19 +116,7 @@ public final class CorePlugin {
 
         this.updateChecker = new UpdateChecker(this);
 
-        this.updateChecker.isUpToDate().thenAccept(upToDate -> {
-
-            try {
-                Thread.sleep(3000);
-            } catch (final InterruptedException ignored) {}
-
-            if (upToDate) {
-                CorePlugin.getLogger().info("CoralGate is up to date!");
-            } else {
-                CorePlugin.getLogger().warning("You are behind updates on CoralGate! Latest version is '" + this.updateChecker.getLatestVersion() + "'. You are on '" + this.platformProperties.getProperty("platform-version") + "'.");
-            }
-
-        });
+        Executors.newSingleThreadScheduledExecutor().schedule(() -> this.updateChecker.checkForUpdates(), 3, java.util.concurrent.TimeUnit.SECONDS);
 
         logger.info("CoralGate is ready to use!");
 

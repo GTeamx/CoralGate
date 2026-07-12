@@ -47,7 +47,7 @@ public class UpdateChecker {
                 .build());
     }
 
-    public CompletableFuture<Boolean> isUpToDate() {
+    private CompletableFuture<Boolean> isUpToDate() {
 
         final String currentVersion = this.corePlugin.getPlatformProperties().getProperty("platform-version");
 
@@ -97,6 +97,22 @@ public class UpdateChecker {
                 });
 
         return this.updateCheckFuture;
+
+    }
+
+    public void checkForUpdates() {
+
+        CorePlugin.getLogger().info("Checking for updates, please wait...");
+
+        isUpToDate().thenAccept(upToDate -> {
+
+            if (upToDate) {
+                CorePlugin.getLogger().info("CoralGate is up to date!");
+            } else {
+                CorePlugin.getLogger().warning("You are behind updates on CoralGate! Latest version is '" + getLatestVersion() + "'. You are on '" + this.corePlugin.getPlatformProperties().getProperty("platform-version") + "'.");
+            }
+
+        });
 
     }
 
