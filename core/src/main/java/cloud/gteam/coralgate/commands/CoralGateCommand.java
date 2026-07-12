@@ -73,6 +73,9 @@ public class CoralGateCommand {
             // However, other platforms only see colors via "§", so we'll have to handle this specifically for Velocity.
             if (this.corePlugin.getPlatformProperties().getProperty("platform-name").equals("velocity")) {
                 line = line.replace("§", "&");
+            } else {
+                // Fool-proof in case somebody put "&" in their config for prefixes.
+                line = line.replace("&", "§");
             }
 
             actor.reply(line);
@@ -129,6 +132,9 @@ public class CoralGateCommand {
             // However, other platforms only see colors via "§", so we'll have to handle this specifically for Velocity.
             if (this.corePlugin.getPlatformProperties().getProperty("platform-name").equals("velocity")) {
                 line = line.replace("§", "&");
+            } else {
+                // Fool-proof in case somebody put "&" in their config for prefixes.
+                line = line.replace("&", "§");
             }
 
             actor.reply(line);
