@@ -47,6 +47,5 @@ spigot-api = { module = "org.spigotmc:spigot-api", version.ref = "spigot" }
 bungeecord-api = { module = "net.md-5:bungeecord-api", version.ref = "bungeecord" }
 velocity-api = { module = "com.velocitypowered:velocity-api", version.ref = "velocity" }
 
-
 [plugins]
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
