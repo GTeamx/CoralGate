@@ -43,9 +43,7 @@ dependencies {
     compileOnly(libs.spigot.api)
 
     // Core implementation.
-    implementation(project(":core")) {
-        exclude("io.netty")
-    }
+    compileOnly(project(":core"))
 
 }
 
@@ -63,6 +61,14 @@ tasks.processResources {
 
 }
 
+// A trick so netty used by async-http-client is always
+// relocated, but netty used by injector is always provided by platform (spigot, bungeecord, velocity)
+val coreProvider = provider { project(":core").tasks.shadowJar.flatMap { it.archiveFile } }
+
+tasks.jar {
+    enabled = false // only shadowJar is used
+}
+
 tasks.shadowJar {
 
     // Wait for the core shadowJar to finish.
@@ -72,13 +78,10 @@ tasks.shadowJar {
     archiveVersion = project.version.toString()
     archiveClassifier = ""
 
-    exclude("io/netty/**")
+    from(zipTree(coreProvider)) // include shadowed core
 
     // Relocate bStats.
     relocate("org.bstats", "cloud.gteam.coralgate.libs.bstats")
-
-    // Relocate netty.
-//    relocate("io.netty", "cloud.gteam.coralgate.libs.netty")
 
     exclude("META-INF/*.SF")
     exclude("META-INF/*.DSA")
