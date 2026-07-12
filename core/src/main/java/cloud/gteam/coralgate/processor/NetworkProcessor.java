@@ -127,6 +127,10 @@ public class NetworkProcessor implements PacketListener {
             if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.STATUS
                     && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.STATUS) {
 
+                // Forcefully check the IP so it can receive the real MOTD next time (if it's legit/safe).
+                // This also allows us to "pre cache" when the client will actually join the server.
+                this.corePlugin.getApiManager().checkIp(ipAddress);
+
                 if (isBadPacket) {
 
                     // Decide reason based on port.
@@ -179,13 +183,13 @@ public class NetworkProcessor implements PacketListener {
         if (packetTypeCommon == PacketType.Status.Client.REQUEST) {
 
             final boolean badHandshake = this.connectionState.getOrDefault(inetSocketAddress, null) != PacketType.Handshaking.Client.HANDSHAKE;
-            final boolean sendForgedMOTD = isBadPacket || badHandshake;
+            final boolean sendForgedMOTD = isBadPacket
+                    || badHandshake
+                    || (this.corePlugin.getConfigManager().getConfig().isAllowApiUsage() && !this.corePlugin.getApiManager().isIpCached(ipAddress)) // Force forged MOTD for IPs that are not yet processed by the API.
+                    || this.corePlugin.getApiManager().isIpCachedBlocked(ipAddress); // Send forged MOTD if the IP is blocked by the API.
 
             // Either suspicious port or bad handshake.
             if (sendForgedMOTD) {
-
-                // Send forged MOTD.
-                packetUser.sendPacketSilently(new WrapperStatusServerResponse(getForgedMOTD()));
 
                 // Custom logging based off port number.
                 //noinspection ExtractMethodRecommender
@@ -206,6 +210,9 @@ public class NetworkProcessor implements PacketListener {
                 // Log the violation, report the IP to CoralGate API, cancel the packet and send forged MOTD.
                 log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, reason, false);
 
+                // Send forged MOTD.
+                packetUser.sendPacketSilently(new WrapperStatusServerResponse(getForgedMOTD()));
+
             }
 
             // Block further logic.
@@ -218,13 +225,13 @@ public class NetworkProcessor implements PacketListener {
         if (packetTypeCommon == PacketType.Status.Client.PING) {
 
             final boolean badHandshake = this.connectionState.getOrDefault(inetSocketAddress, null) != PacketType.Handshaking.Client.HANDSHAKE;
-            final boolean sendForgedPong = isBadPacket || badHandshake;
+            final boolean sendForgedPong = isBadPacket
+                    || badHandshake
+                    || (this.corePlugin.getConfigManager().getConfig().isAllowApiUsage() && !this.corePlugin.getApiManager().isIpCached(ipAddress)) // Force forged pong for IPs that are not yet processed by the API.
+                    || this.corePlugin.getApiManager().isIpCachedBlocked(ipAddress); // Send forged pong if the IP is blocked by the API.
 
             // Either suspicious port or bad handshake.
             if (sendForgedPong) {
-
-                // Send forged pong.
-                packetUser.sendPacketSilently(new WrapperStatusServerPong(new WrapperStatusClientPing(packetReceiveEvent).getTime()));
 
                 // Custom logging based off port number.
                 //noinspection ExtractMethodRecommender
@@ -244,6 +251,9 @@ public class NetworkProcessor implements PacketListener {
 
                 // Log the violation, report the IP to CoralGate API, cancel the packet and send forged pong.
                 log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, reason, false);
+
+                // Send forged pong.
+                packetUser.sendPacketSilently(new WrapperStatusServerPong(new WrapperStatusClientPing(packetReceiveEvent).getTime()));
 
             }
 
@@ -284,13 +294,51 @@ public class NetworkProcessor implements PacketListener {
             // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
             verifyAndTransitionState(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, PacketType.Handshaking.Client.HANDSHAKE, packetTypeCommon, "Missing proper handshake.");
 
-            final WrapperLoginClientLoginStart wrapperLoginClientLoginStart = new WrapperLoginClientLoginStart(packetReceiveEvent);
+            // The state validation failed, no need to run a check against the API.
+            if (packetReceiveEvent.isCancelled()) {
+                return; // Block further logic.
+            }
 
-            // Filter debug usernames.
-            if (wrapperLoginClientLoginStart.getUsername().startsWith("Player")) {
+            // Either if health checking is disabled or if the API is truly healthy.
+            if (!this.corePlugin.getConfigManager().getConfig().isApiHealthCheck() || this.corePlugin.getApiManager().isHealthy()) {
 
-                // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-                log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Bot-like username pattern detected.", true);
+                // Cancel the packet to send it later.
+                packetReceiveEvent.setCancelled(true);
+
+                // Cache wrapper and data to reconstruct and send it back later.
+                final WrapperLoginClientLoginStart wrapperLoginClientLoginStart = new WrapperLoginClientLoginStart(packetReceiveEvent);
+
+                // Cache username, it's being used twice. Save some CPU for the rest of us!!!1111!!1!1!
+                final String username = wrapperLoginClientLoginStart.getUsername();
+
+                // Filter debug usernames.
+                if (username.startsWith("Player")) {
+
+                    // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+                    log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Bot-like username pattern detected.", true);
+
+                    // The connection is closed and the packet dropped, no need to run a check against the API.
+                    // Block further logic.
+                    return;
+
+                }
+
+                // Fetch API async.
+                this.corePlugin.getApiManager().isIpBlocked(ipAddress).thenAccept(blocked -> {
+
+                    if (blocked) {
+
+                        // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+                        log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "IP is blocked by the API.", true);
+
+                    } else {
+
+                        // Process the packet again, the player is verified by the API.
+                        packetUser.receivePacketSilently(new WrapperLoginClientLoginStart(wrapperLoginClientLoginStart.getClientVersion(), username, wrapperLoginClientLoginStart.getSignatureData().orElse(null), wrapperLoginClientLoginStart.getPlayerUUID().orElse(null)));
+
+                    }
+
+                });
 
             }
 
@@ -443,7 +491,7 @@ public class NetworkProcessor implements PacketListener {
                 if (disconnectReasonString.contains(serverVersion)) {
 
                     // Replace the real server's version by the spoofed one.
-                    final String newDisconnectReason = disconnectReasonString.replace(serverVersion, "26.2");
+                    final String newDisconnectReason = disconnectReasonString.replace(serverVersion, "1.21.11");
 
                     // Reconstruct reason with spoofed server version.
                     final Component safeDisconnectReason = Component.text()
@@ -514,7 +562,7 @@ public class NetworkProcessor implements PacketListener {
         }
 
         // Report IP to CoralGate's API.
-        this.corePlugin.getApiManager().reportIp(ipAddress);
+        this.corePlugin.getApiManager().checkIp(ipAddress);
 
         packetReceiveEvent.setCancelled(true);
         if (closeConnection) {
@@ -532,7 +580,7 @@ public class NetworkProcessor implements PacketListener {
         CorePlugin.getLogger().severe(reason + " Closing connection from " + inetSocketAddress + ". [S->C | " + packetSendEvent.getPacketType().getClass().getDeclaringClass().getSimpleName() + "." + packetTypeCommon.getName() + "]");
 
         // Report IP to CoralGate's API.
-        this.corePlugin.getApiManager().reportIp(ipAddress);
+        this.corePlugin.getApiManager().checkIp(ipAddress);
 
         packetSendEvent.setCancelled(true);
         packetSendEvent.getUser().closeConnection();
@@ -571,7 +619,7 @@ public class NetworkProcessor implements PacketListener {
     }
 
     private String getForgedMOTD() {
-        return "{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"Paper 26.2\",\"protocol\":776},\"enforcesSecureChat\":true}";
+        return "{\"description\":{\"text\":\"\",\"extra\":[\"A Minecraft Server\"]},\"players\":{\"max\":20,\"online\":0},\"version\":{\"name\":\"Paper 1.21.11\",\"protocol\":776},\"enforcesSecureChat\":true}";
     }
 
     private boolean exemptLocalIpAddress(final InetSocketAddress inetSocketAddress) {
