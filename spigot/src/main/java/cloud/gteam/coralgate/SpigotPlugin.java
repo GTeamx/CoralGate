@@ -43,12 +43,12 @@ public final class SpigotPlugin extends JavaPlugin {
 
     @Override
     public void onLoad() {
-        PacketEvents.getAPI().getEventManager().registerListener(
-                new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
-
         if (!injector.isServerBound()) {
             injector.inject();
         }
+
+        PacketEvents.getAPI().getEventManager().registerListener(
+                new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
     }
 
     @Override
