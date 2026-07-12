@@ -62,6 +62,10 @@ tasks.shadowJar {
 
     relocate("dev.dejvokep.boostedyaml", "cloud.gteam.coralgate.libs.boostedyaml")
 
+    filesMatching("META-INF/*.kotlin_module") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+
 }
 
 tasks.build {
