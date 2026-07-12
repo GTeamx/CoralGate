@@ -21,6 +21,7 @@ package cloud.gteam.coralgate;
 import cloud.gteam.coralgate.commands.BungeePermissionChecker;
 import cloud.gteam.coralgate.commands.CoralGateCommand;
 import cloud.gteam.coralgate.commands.permissions.PermissionFactory;
+import cloud.gteam.coralgate.injector.BungeeInjector;
 import cloud.gteam.coralgate.processor.NetworkProcessor;
 import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -34,9 +35,11 @@ import revxrsal.commands.bungee.actor.BungeeCommandActor;
 public final class BungeePlugin extends Plugin {
 
     private final CorePlugin corePlugin = new CorePlugin();
+    private final BungeeInjector injector = new BungeeInjector();
 
     @Override
     public void onLoad() {
+        injector.inject();
         PacketEvents.getAPI().getEventManager().registerListener(
                 new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
     }
