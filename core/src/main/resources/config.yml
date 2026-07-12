@@ -6,7 +6,7 @@
 # You need to restart your server in order to fully apply changes!
 
 # Config file version. DO NOT CHANGE THIS!
-version: "0.2.2"
+version: "0.2.3"
 
 # Per category message prefixes.
 prefixes:
@@ -87,20 +87,3 @@ filter-settings:
   # Expected value type: Boolean
   # Expected value: true
   ignore-local-addresses: true
-
-  # Client brands which are allowed to connect.
-  # This contains the big majority of widely used clients.
-  # If any is missing, feel free to add it.
-  # If the client brand you want to allow doesn't send a proper name, feel free to disable the client brand check.
-  allowed-client-brands:
-    - vanilla
-    - fabric
-    - forge
-    - neoforge
-    - quilt
-    - lunarclient
-    - badlion
-    - feather
-    - labymod4
-    - cheatbreaker
-    - geyser

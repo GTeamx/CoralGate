@@ -99,7 +99,6 @@ public class ConfigManager {
         this.config.setApiTriggerFieldValue(this.document.getString("api-settings.trigger-field-value", "true"));
 
         this.config.setIgnoreLocalAddresses(this.document.getBoolean("filter-settings.ignore-local-addresses", true));
-        this.config.setAllowedClientBrands(this.document.getStringList("filter-settings.allowed-client-brands", Arrays.asList("vanilla", "fabric", "forge", "neoforge", "quilt", "lunarclient", "badlion", "feather", "labymod4", "cheatbreaker", "geyser")));
 
     }
 

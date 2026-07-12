@@ -55,8 +55,6 @@ public class ConfigModel {
 
         private boolean ignoreLocalAddresses = true;
 
-        private List<String> allowedClientBrands = Arrays.asList("vanilla", "fabric", "forge", "neoforge", "quilt", "lunarclient", "badlion", "feather", "labymod4", "cheatbreaker", "Geyser");
-
     }
 
     public void setConfigVersion(final String version) {
@@ -153,14 +151,6 @@ public class ConfigModel {
 
     public boolean isIgnoreLocalAddresses() {
         return this.filterSettings.ignoreLocalAddresses;
-    }
-
-    public List<String> getAllowedClientBrands() {
-        return this.filterSettings.allowedClientBrands;
-    }
-
-    public void setAllowedClientBrands(final List<String> allowedClientBrands) {
-        this.filterSettings.allowedClientBrands = allowedClientBrands;
     }
 
 }
