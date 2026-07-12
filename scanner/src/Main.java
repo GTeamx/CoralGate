@@ -67,9 +67,9 @@ public final class Main {
     private static final int INVALID_LOCAL_PORT     = 10000;
 
     // Fingerprint of NetworkProcessor#getForgedMOTD()
-    private static final String FORGED_VERSION = "26.2";
+    private static final String FORGED_VERSION = "1.21.11";
     private static final String FORGED_MARKER_1 = "Paper " + FORGED_VERSION;
-    private static final String FORGED_MARKER_2 = "\"protocol\":776";
+    private static final String FORGED_MARKER_2 = "\"protocol\":774";
     private static final String FORGED_MARKER_3 = "\"enforcesSecureChat\":true";
 
     private static int passCount = 0;
@@ -82,7 +82,7 @@ public final class Main {
         }
         HOST = args[0];
         PORT = Integer.parseInt(args[1]);
-        PROTOCOL = args.length >= 3 ? Integer.parseInt(args[2]) : 776;
+        PROTOCOL = args.length >= 3 ? Integer.parseInt(args[2]) : 774;
         if (args.length >= 4) TIMEOUT_MS = Integer.parseInt(args[3]);
 
         banner();
