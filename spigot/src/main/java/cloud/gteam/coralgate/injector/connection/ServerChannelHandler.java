@@ -1,6 +1,6 @@
 package cloud.gteam.coralgate.injector.connection;
 
-import cloud.gteam.coralgate.injector.CoralGateInjector;
+import cloud.gteam.coralgate.injector.SpigotInjector;
 import com.github.retrooper.packetevents.util.PEVersion;
 import io.github.retrooper.packetevents.util.SpigotReflectionUtil;
 import io.netty.channel.Channel;
@@ -29,9 +29,9 @@ public class ServerChannelHandler extends ChannelInboundHandlerAdapter {
 //        Depends on netty version. If we cannot resolve that we just check server version.
         if ((NETTY_VERSION != null && NETTY_VERSION.isNewerThan(MODERN_NETTY_VERSION))
                 || SpigotReflectionUtil.V_1_12_OR_HIGHER) {
-            channel.pipeline().addLast(CoralGateInjector.SERVER_CHANNEL_HANDLER_NAME, new PreChannelInitializer_v1_12());
+            channel.pipeline().addLast(SpigotInjector.SERVER_CHANNEL_HANDLER_NAME, new PreChannelInitializer_v1_12());
         } else {
-            channel.pipeline().addFirst(CoralGateInjector.SERVER_CHANNEL_HANDLER_NAME, new PreChannelInitializer_v1_8());
+            channel.pipeline().addFirst(SpigotInjector.SERVER_CHANNEL_HANDLER_NAME, new PreChannelInitializer_v1_8());
         }
         super.channelRead(ctx, msg);
     }

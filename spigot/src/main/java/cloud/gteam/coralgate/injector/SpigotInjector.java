@@ -14,7 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class CoralGateInjector {
+public class SpigotInjector {
     public static String DECODER_NAME = "cg-decoder";
     public static String CONNECTION_HANDLER_NAME = "cg-connection-handler";
     public static String SERVER_CHANNEL_HANDLER_NAME = "cg-connection-initializer";
@@ -89,32 +89,32 @@ public class CoralGateInjector {
 
     private void injectServerChannel(Channel serverChannel) {
         ChannelPipeline pipeline = serverChannel.pipeline();
-        ChannelHandler connectionHandler = pipeline.get(CoralGateInjector.CONNECTION_HANDLER_NAME);
+        ChannelHandler connectionHandler = pipeline.get(SpigotInjector.CONNECTION_HANDLER_NAME);
         if (connectionHandler != null) {
             //Why does it already exist? Remove it.
-            pipeline.remove(CoralGateInjector.CONNECTION_HANDLER_NAME);
+            pipeline.remove(SpigotInjector.CONNECTION_HANDLER_NAME);
         }
         //Make sure we handle connections after ProtocolSupport.
         if (pipeline.get("SpigotNettyServerChannelHandler#0") != null) {
-            pipeline.addAfter("SpigotNettyServerChannelHandler#0", CoralGateInjector.CONNECTION_HANDLER_NAME, new ServerChannelHandler());
+            pipeline.addAfter("SpigotNettyServerChannelHandler#0", SpigotInjector.CONNECTION_HANDLER_NAME, new ServerChannelHandler());
         }
         //Make sure we handle connections after Geyser.
         else if (pipeline.get("floodgate-init") != null) {
-            pipeline.addAfter("floodgate-init", CoralGateInjector.CONNECTION_HANDLER_NAME, new ServerChannelHandler());
+            pipeline.addAfter("floodgate-init", SpigotInjector.CONNECTION_HANDLER_NAME, new ServerChannelHandler());
         }
         //Some forks add a handler which adds the other necessary vanilla handlers like (decoder, encoder, etc...)
         else if (pipeline.get("MinecraftPipeline#0") != null) {
-            pipeline.addAfter("MinecraftPipeline#0", CoralGateInjector.CONNECTION_HANDLER_NAME, new ServerChannelHandler());
+            pipeline.addAfter("MinecraftPipeline#0", SpigotInjector.CONNECTION_HANDLER_NAME, new ServerChannelHandler());
         }
         //Otherwise, make sure we are first.
         else {
-            pipeline.addFirst(CoralGateInjector.CONNECTION_HANDLER_NAME, new ServerChannelHandler());
+            pipeline.addFirst(SpigotInjector.CONNECTION_HANDLER_NAME, new ServerChannelHandler());
         }
     }
 
     private void uninjectServerChannel(Channel serverChannel) {
-        if (serverChannel.pipeline().get(CoralGateInjector.CONNECTION_HANDLER_NAME) != null) {
-            serverChannel.pipeline().remove(CoralGateInjector.CONNECTION_HANDLER_NAME);
+        if (serverChannel.pipeline().get(SpigotInjector.CONNECTION_HANDLER_NAME) != null) {
+            serverChannel.pipeline().remove(SpigotInjector.CONNECTION_HANDLER_NAME);
         } else {
             CorePlugin.getLogger().warning("Failed to uninject server channel, handler not found");
         }

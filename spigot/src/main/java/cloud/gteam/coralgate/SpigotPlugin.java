@@ -21,7 +21,7 @@ package cloud.gteam.coralgate;
 import cloud.gteam.coralgate.commands.CoralGateCommand;
 import cloud.gteam.coralgate.commands.SpigotPermissionChecker;
 import cloud.gteam.coralgate.commands.permissions.PermissionFactory;
-import cloud.gteam.coralgate.injector.CoralGateInjector;
+import cloud.gteam.coralgate.injector.SpigotInjector;
 import cloud.gteam.coralgate.processor.NetworkProcessor;
 import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -39,7 +39,7 @@ public final class SpigotPlugin extends JavaPlugin {
 
     private final CorePlugin corePlugin = new CorePlugin();
 
-    private final CoralGateInjector injector = new CoralGateInjector();
+    private final SpigotInjector injector = new SpigotInjector();
 
     @Override
     public void onLoad() {

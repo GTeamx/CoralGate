@@ -14,10 +14,10 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 
 import java.util.List;
 
-public class CoralGateDecoder extends MessageToMessageDecoder<ByteBuf> {
+public class SpigotDecoder extends MessageToMessageDecoder<ByteBuf> {
     public User user;
 
-    public CoralGateDecoder(User user) {
+    public SpigotDecoder(User user) {
         this.user = user;
     }
 
