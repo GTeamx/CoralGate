@@ -120,6 +120,15 @@ Port/IP scanners, crawlers, MOTD/player-count fetchers, VPNs, proxies, TOR exit 
 **Traffic exempt from blocking:**
 Known voting sites and verified server lists.
 
+### Privacy & Disclosure
+
+By default, CoralGate automatically verifies the reputation of connecting players to block malicious traffic.
+
+* **Data Transmitted:** When a player attempts to join, their IP address is sent via a secure GET request to our proprietary API.
+* **Endpoint:** `https://api.gteam.cloud/coralgate/v2/<ip_address>`
+* **Privacy:** The API is hosted in Germany (fully GDPR-compliant). No personally identifiable information (PII) beyond the IP is processed, and data is used strictly for real-time risk assessment.
+* **Opt-Out:** You can entirely disable this external API lookup or route requests through your own custom endpoint by modifying the `config.yml` file.
+
 ## Contributing & Support
 
 **Issues & Feature Requests:**
