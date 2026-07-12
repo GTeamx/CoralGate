@@ -26,9 +26,7 @@ import org.asynchttpclient.Dsl;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class UpdateChecker {
 

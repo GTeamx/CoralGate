@@ -18,9 +18,6 @@
 
 package cloud.gteam.coralgate.config;
 
-import java.util.Arrays;
-import java.util.List;
-
 public class ConfigModel {
 
     private String version;
