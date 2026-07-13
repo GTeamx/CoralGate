@@ -33,7 +33,7 @@ import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.wrapper.handshaking.client.WrapperHandshakingClientHandshake;
 import com.github.retrooper.packetevents.wrapper.login.client.WrapperLoginClientLoginStart;
 import com.github.retrooper.packetevents.wrapper.login.server.WrapperLoginServerDisconnect;
-import com.github.retrooper.packetevents.wrapper.login.server.WrapperLoginServerEncryptionRequest;
+import com.github.retrooper.packetevents.wrapper.login.server.WrapperLoginServerLoginSuccess;
 import com.github.retrooper.packetevents.wrapper.status.client.WrapperStatusClientPing;
 import com.github.retrooper.packetevents.wrapper.status.server.WrapperStatusServerPong;
 import com.github.retrooper.packetevents.wrapper.status.server.WrapperStatusServerResponse;
@@ -494,7 +494,7 @@ public class NetworkProcessor implements PacketListener {
                     packetSendEvent.setCancelled(true);
 
                     // Cache wrapper and data to reconstruct and send it back later.
-                    final WrapperLoginServerEncryptionRequest wrapperLoginServerEncryptionRequest = new WrapperLoginServerEncryptionRequest(packetSendEvent);
+                    final WrapperLoginServerLoginSuccess wrapperLoginServerLoginSuccess = new WrapperLoginServerLoginSuccess(packetSendEvent);
 
                     // Fetch API async.
                     this.corePlugin.getApiManager().isIpBlocked(ipAddress).thenAccept(blocked -> {
@@ -507,7 +507,7 @@ public class NetworkProcessor implements PacketListener {
                         } else {
 
                             // Process the packet again, the player is verified by the API.
-                            packetSendEvent.getUser().sendPacketSilently(new WrapperLoginServerEncryptionRequest(wrapperLoginServerEncryptionRequest.getServerId(), wrapperLoginServerEncryptionRequest.getPublicKeyBytes(), wrapperLoginServerEncryptionRequest.getVerifyToken(), wrapperLoginServerEncryptionRequest.isShouldAuthenticate()));
+                            packetSendEvent.getUser().sendPacketSilently(new WrapperLoginServerLoginSuccess(wrapperLoginServerLoginSuccess.getUserProfile(), wrapperLoginServerLoginSuccess.getSessionId(), wrapperLoginServerLoginSuccess.isStrictErrorHandling()));
 
                         }
 
