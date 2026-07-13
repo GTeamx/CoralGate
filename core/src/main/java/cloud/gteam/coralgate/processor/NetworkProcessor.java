@@ -33,6 +33,7 @@ import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.wrapper.handshaking.client.WrapperHandshakingClientHandshake;
 import com.github.retrooper.packetevents.wrapper.login.client.WrapperLoginClientLoginStart;
 import com.github.retrooper.packetevents.wrapper.login.server.WrapperLoginServerDisconnect;
+import com.github.retrooper.packetevents.wrapper.login.server.WrapperLoginServerEncryptionRequest;
 import com.github.retrooper.packetevents.wrapper.status.client.WrapperStatusClientPing;
 import com.github.retrooper.packetevents.wrapper.status.server.WrapperStatusServerPong;
 import com.github.retrooper.packetevents.wrapper.status.server.WrapperStatusServerResponse;
@@ -294,57 +295,60 @@ public class NetworkProcessor implements PacketListener {
             // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
             verifyAndTransitionState(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, PacketType.Handshaking.Client.HANDSHAKE, packetTypeCommon, "Missing proper handshake.");
 
-            // The state validation failed, no need to run a check against the API.
-            if (packetReceiveEvent.isCancelled()) {
-                return; // Block further logic.
-            }
+            // This only works on Spigot/Paper due to a bug on BungeeCord/Velocity with packetevents.
+            // Proxies pass the API check when reaching "LOGIN_SUCCESS (S->C). It's the only place where it will work like LOGIN_START.
+            // Note: this does cause information about ENCRYPTION_REQUEST and SET_COMPRESSION to leak towards the player...
+            // See issues: https://github.com/GTeamX/CoralGate/issues/34 and https://github.com/retrooper/packetevents/issues/1465
+            // TODO: find better solution/fix PE issue
+            if (!PacketEvents.getAPI().getInjector().isProxy()) {
 
-            // Either if health checking is disabled or if the API is truly healthy.
-            if (!this.corePlugin.getConfigManager().getConfig().isApiHealthCheck() || this.corePlugin.getApiManager().isHealthy()) {
+                // The state validation failed, no need to run a check against the API.
+                if (packetReceiveEvent.isCancelled()) {
+                    return; // Block further logic.
+                }
 
-                // Cancel the packet to send it later.
-                // This dynamic 'cancel and send later' method only works on Spigot/Paper. It doesn't work on Proxies.
-                // We'll just need to pre-cache the API results in advance (HANDSHAKE, REQUEST, PING).
-                // This will cause players not be able to seemlessly connect and will cause "Diconnected." messages...
-                // TODO: find better solution
-                if (!this.corePlugin.getPlatformProperties().getProperty("platform-type").equals("proxy")) {
+                // Either if health checking is disabled or if the API is truly healthy.
+                if (!this.corePlugin.getConfigManager().getConfig().isApiHealthCheck() || this.corePlugin.getApiManager().isHealthy()) {
+
+                    // Cancel the packet to send it later.
                     packetReceiveEvent.setCancelled(true);
-                }
 
-                // Cache wrapper and data to reconstruct and send it back later.
-                final WrapperLoginClientLoginStart wrapperLoginClientLoginStart = new WrapperLoginClientLoginStart(packetReceiveEvent);
+                    // Cache wrapper and data to reconstruct and send it back later.
+                    final WrapperLoginClientLoginStart wrapperLoginClientLoginStart = new WrapperLoginClientLoginStart(packetReceiveEvent);
 
-                // Cache username, it's being used twice. Save some CPU for the rest of us!!!1111!!1!1!
-                final String username = wrapperLoginClientLoginStart.getUsername();
+                    // Cache username, it's being used twice. Save some CPU for the rest of us!!!1111!!1!1!
+                    final String username = wrapperLoginClientLoginStart.getUsername();
 
-                // Filter debug usernames.
-                if (username.startsWith("Player")) {
-
-                    // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-                    log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Bot-like username pattern detected.", true);
-
-                    // The connection is closed and the packet dropped, no need to run a check against the API.
-                    // Block further logic.
-                    return;
-
-                }
-
-                // Fetch API async.
-                this.corePlugin.getApiManager().isIpBlocked(ipAddress).thenAccept(blocked -> {
-
-                    if (blocked) {
+                    // Filter debug usernames.
+                    if (username.startsWith("Player")) {
 
                         // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
-                        log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "IP is blocked by the API.", true);
+                        log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Bot-like username pattern detected.", true);
 
-                    } else if (!this.corePlugin.getPlatformProperties().getProperty("platform-type").equals("proxy")) { // TODO: same problem describe above...
-
-                        // Process the packet again, the player is verified by the API.
-                        packetUser.receivePacketSilently(new WrapperLoginClientLoginStart(wrapperLoginClientLoginStart.getClientVersion(), username, wrapperLoginClientLoginStart.getSignatureData().orElse(null), wrapperLoginClientLoginStart.getPlayerUUID().orElse(null)));
+                        // The connection is closed and the packet dropped, no need to run a check against the API.
+                        // Block further logic.
+                        return;
 
                     }
 
-                });
+                    // Fetch API async.
+                    this.corePlugin.getApiManager().isIpBlocked(ipAddress).thenAccept(blocked -> {
+
+                        if (blocked) {
+
+                            // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+                            log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "IP is blocked by the API.", true);
+
+                        } else {
+
+                            // Process the packet again, the player is verified by the API.
+                            packetUser.receivePacketSilently(new WrapperLoginClientLoginStart(wrapperLoginClientLoginStart.getClientVersion(), username, wrapperLoginClientLoginStart.getSignatureData().orElse(null), wrapperLoginClientLoginStart.getPlayerUUID().orElse(null)));
+
+                        }
+
+                    });
+
+                }
 
             }
 
@@ -382,7 +386,7 @@ public class NetworkProcessor implements PacketListener {
         // However, if we're on a proxy, the server version is marked as 1.8 since it's the lowest Bungee supports (when it could be anything else).
         // Therefore, we should base ourselves off the client's version ONLY if we are running on a proxy.
         final boolean useLoginSuccessAck = PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_20_2)
-                || (this.corePlugin.getPlatformProperties().getProperty("platform-type").equals("proxy")
+                || (PacketEvents.getAPI().getInjector().isProxy()
                 && packetUser.getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_20_2));
 
         final PacketTypeCommon expectedFinalState = useLoginSuccessAck
@@ -475,6 +479,44 @@ public class NetworkProcessor implements PacketListener {
             // If something is wrong, log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
             verifyAndTransitionState(packetSendEvent, inetSocketAddress, ipAddress, packetTypeCommon, requiredPacketTypeCommon, packetTypeCommon, "Missing set compression procedure.");
 
+            // This fix is really only for proxies. The API check run way earlier for the Spigot/Paper versions.
+            if (PacketEvents.getAPI().getInjector().isProxy()) {
+
+                // The state validation failed, no need to run a check against the API.
+                if (packetSendEvent.isCancelled()) {
+                    return; // Block further logic.
+                }
+
+                // Either if health checking is disabled or if the API is truly healthy.
+                if (!this.corePlugin.getConfigManager().getConfig().isApiHealthCheck() || this.corePlugin.getApiManager().isHealthy()) {
+
+                    // Cancel the packet to send it later.
+                    packetSendEvent.setCancelled(true);
+
+                    // Cache wrapper and data to reconstruct and send it back later.
+                    final WrapperLoginServerEncryptionRequest wrapperLoginServerEncryptionRequest = new WrapperLoginServerEncryptionRequest(packetSendEvent);
+
+                    // Fetch API async.
+                    this.corePlugin.getApiManager().isIpBlocked(ipAddress).thenAccept(blocked -> {
+
+                        if (blocked) {
+
+                            // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
+                            log(packetSendEvent, inetSocketAddress, ipAddress, packetTypeCommon, "IP is blocked by the API.");
+
+                        } else {
+
+                            // Process the packet again, the player is verified by the API.
+                            packetSendEvent.getUser().sendPacketSilently(new WrapperLoginServerEncryptionRequest(wrapperLoginServerEncryptionRequest.getServerId(), wrapperLoginServerEncryptionRequest.getPublicKeyBytes(), wrapperLoginServerEncryptionRequest.getVerifyToken(), wrapperLoginServerEncryptionRequest.isShouldAuthenticate()));
+
+                        }
+
+                    });
+
+                }
+
+            }
+
             // Block further logic.
             return;
 
@@ -524,7 +566,7 @@ public class NetworkProcessor implements PacketListener {
         // However, if we're on a proxy, the server version is marked as 1.8 since it's the lowest Bungee supports (when it could be anything else).
         // Therefore, we should base ourselves off the client's version ONLY if we are running on a proxy.
         final boolean useLoginSuccessAck = PacketEvents.getAPI().getServerManager().getVersion().isNewerThanOrEquals(ServerVersion.V_1_20_2)
-                || (this.corePlugin.getPlatformProperties().getProperty("platform-type").equals("proxy")
+                || (PacketEvents.getAPI().getInjector().isProxy()
                 && packetSendEvent.getUser().getClientVersion().isNewerThanOrEquals(ClientVersion.V_1_20_2));
 
         final PacketTypeCommon expectedFinalState = useLoginSuccessAck
