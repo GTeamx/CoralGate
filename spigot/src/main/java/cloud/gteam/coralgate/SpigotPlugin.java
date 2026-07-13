@@ -43,19 +43,21 @@ public final class SpigotPlugin extends JavaPlugin {
 
     @Override
     public void onLoad() {
-        if (!injector.isServerBound()) {
-            injector.inject();
+
+        if (!this.injector.isServerBound()) {
+            this.injector.inject();
         }
 
-        PacketEvents.getAPI().getEventManager().registerListener(
-                new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
+        PacketEvents.getAPI().getEventManager().registerListener(new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
+
     }
 
     @Override
     public void onEnable() {
 
-        if (!injector.hasInjected) {
-            injector.inject();
+        // Inject for LEGACY_SERVER_LIST_PING.
+        if (!this.injector.hasInjected) {
+            this.injector.inject();
         }
 
         // Start bStats.

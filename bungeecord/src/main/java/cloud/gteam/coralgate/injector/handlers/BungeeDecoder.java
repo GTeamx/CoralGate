@@ -31,51 +31,65 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 
 public class BungeeDecoder extends MessageToMessageDecoder<ByteBuf> {
-    public User user;
 
-    public BungeeDecoder(User user) {
+    public final User user;
+
+    public BungeeDecoder(final User user) {
         this.user = user;
     }
 
-    public void read(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> output) throws Exception {
+    public void read(final ChannelHandlerContext ctx, final ByteBuf byteBuf, final List<Object> output) throws Exception {
 
-        int firstReaderIndex = byteBuf.readerIndex();
+        final int firstReaderIndex = byteBuf.readerIndex();
 
-        PacketHandshakeReceiveEvent packetReceiveEvent = new PacketHandshakeReceiveEvent(ctx.channel(), user, null, byteBuf, false);
+        final PacketHandshakeReceiveEvent packetReceiveEvent = new PacketHandshakeReceiveEvent(ctx.channel(), this.user, null, byteBuf, false);
 
-        int readerIndex = byteBuf.readerIndex();
-        PacketEvents.getAPI().getEventManager().callEvent(packetReceiveEvent, () -> byteBuf.readerIndex(readerIndex));
+        PacketEvents.getAPI().getEventManager().callEvent(packetReceiveEvent, () -> byteBuf.readerIndex(byteBuf.readerIndex()));
         if (!packetReceiveEvent.isCancelled()) {
+
             if (packetReceiveEvent.getLastUsedWrapper() != null) {
+
                 ByteBufHelper.clear(byteBuf);
                 packetReceiveEvent.getLastUsedWrapper().writeVarInt(packetReceiveEvent.getPacketId());
                 packetReceiveEvent.getLastUsedWrapper().write();
+
             }
+
             byteBuf.readerIndex(firstReaderIndex);
             output.add(byteBuf.retain());
+
         } else {
-            //Cancelling the packet, lets clear the buffer
+
+            // Cancelling the packet, lets clear the buffer.
             ByteBufHelper.clear(byteBuf);
+
         }
+
         if (packetReceiveEvent.hasPostTasks()) {
-            for (Runnable task : packetReceiveEvent.getPostTasks()) {
+
+            for (final Runnable task : packetReceiveEvent.getPostTasks()) {
                 task.run();
             }
+
         }
 
     }
 
     @Override
-    public void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
+    public void decode(final ChannelHandlerContext ctx, final ByteBuf buffer, final List<Object> out) throws Exception {
+
         if (buffer.isReadable()) {
             read(ctx, buffer, out);
         }
+
     }
 
     @Override
-    public void channelInactive(@NotNull ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(final @NotNull ChannelHandlerContext ctx) throws Exception {
+
         ServerConnectionInitializer.destroyChannel(ctx.channel());
         super.channelInactive(ctx);
+
     }
 
 }

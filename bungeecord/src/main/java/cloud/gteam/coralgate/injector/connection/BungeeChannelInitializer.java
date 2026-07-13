@@ -26,29 +26,44 @@ import org.jetbrains.annotations.NotNull;
 import java.lang.reflect.Method;
 
 public class BungeeChannelInitializer extends ChannelInitializer<Channel> {
+
     private static final Method INIT_CHANNEL_METHOD;
 
     static {
+
         try {
+
             INIT_CHANNEL_METHOD = ChannelInitializer.class.getDeclaredMethod("initChannel", Channel.class);
             INIT_CHANNEL_METHOD.setAccessible(true);
-        } catch (NoSuchMethodException e) {
+
+        } catch (final NoSuchMethodException e) {
             throw new RuntimeException(e);
         }
+
     }
+
     private final Object oldInitializer;
-    public BungeeChannelInitializer(Object oldInitializer) {
+
+    public BungeeChannelInitializer(final Object oldInitializer) {
         this.oldInitializer = oldInitializer;
     }
 
     @Override
-    protected void initChannel(@NotNull Channel channel) throws Exception {
-        if (!channel.isActive()) return;
-        INIT_CHANNEL_METHOD.invoke(oldInitializer, channel);
+    protected void initChannel(final @NotNull Channel channel) throws Exception {
 
-        //No injection if "legacy-decoder" is not present.
-        if (channel.pipeline().get("legacy-decoder") == null) return;
+        if (!channel.isActive()) {
+            return;
+        }
+
+        INIT_CHANNEL_METHOD.invoke(this.oldInitializer, channel);
+
+        // No injection if "legacy-decoder" is not present.
+        if (channel.pipeline().get("legacy-decoder") == null) {
+            return;
+        }
 
         ServerConnectionInitializer.initChannel(channel, ConnectionState.HANDSHAKING);
+
     }
+
 }

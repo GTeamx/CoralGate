@@ -23,13 +23,19 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 
 public class PreChannelInitializer_v1_8 extends ChannelInitializer<Channel> {
+
     @Override
-    protected void initChannel(Channel channel) {
+    protected void initChannel(final Channel channel) {
+
         channel.pipeline().addLast(new ChannelInitializer<Channel>() {
+
             @Override
-            protected void initChannel(Channel channel) {
+            protected void initChannel(final Channel channel) {
                 ServerConnectionInitializer.initChannel(channel, ConnectionState.HANDSHAKING);
             }
+
         });
+
     }
+
 }

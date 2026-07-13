@@ -71,7 +71,7 @@ public final class VelocityPlugin {
     @Subscribe
     public void onProxyInitialization(final ProxyInitializeEvent proxyInitializeEvent) {
 
-        injector.inject();
+        this.injector.inject();
 
         // Start bStats.
         this.metricsFactory.make(this, 29439);

@@ -33,30 +33,37 @@ import static io.github.retrooper.packetevents.injector.connection.ServerChannel
 public class ServerChannelHandler extends ChannelInboundHandlerAdapter {
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (!(msg instanceof Channel)) return;
+    public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
 
-        Channel channel = (Channel) msg;
-        //Resolve netty version only once.
-
-        if (NETTY_VERSION == null && !CHECKED_NETTY_VERSION) {
-            NETTY_VERSION = resolveNettyVersion();
-            CHECKED_NETTY_VERSION = true;
+        if (!(msg instanceof Channel)) {
+            return;
         }
 
-//        Depends on netty version. If we cannot resolve that we just check server version.
+        final Channel channel = (Channel) msg;
+
+        // Resolve netty version only once.
+        if (NETTY_VERSION == null && !CHECKED_NETTY_VERSION) {
+
+            NETTY_VERSION = resolveNettyVersion();
+            CHECKED_NETTY_VERSION = true;
+
+        }
+
+        // Depends on netty version. If we cannot resolve that we just check server version.
         if ((NETTY_VERSION != null && NETTY_VERSION.isNewerThan(MODERN_NETTY_VERSION))
                 || SpigotReflectionUtil.V_1_12_OR_HIGHER) {
             channel.pipeline().addLast(SpigotInjector.SERVER_CHANNEL_HANDLER_NAME, new PreChannelInitializer_v1_12());
         } else {
             channel.pipeline().addFirst(SpigotInjector.SERVER_CHANNEL_HANDLER_NAME, new PreChannelInitializer_v1_8());
         }
+
         super.channelRead(ctx, msg);
+
     }
 
-
     private static PEVersion resolveNettyVersion() {
-        Map<String, Version> nettyArtifacts = Version.identify();
+
+        final Map<String, Version> nettyArtifacts = Version.identify();
 
         Version version = nettyArtifacts.getOrDefault("netty-common", nettyArtifacts.get("netty-all"));
 
@@ -65,22 +72,27 @@ public class ServerChannelHandler extends ChannelInboundHandlerAdapter {
         }
 
         if (version != null) {
+
             String stringVersion = version.artifactVersion();
 
-            // Remove the ".Final" from the version by just removing any words (non numbers or dots)
+            // Remove the ".Final" from the version by just removing any words (non numbers or dots).
             stringVersion = stringVersion.replaceAll("[^\\d.]", "");
 
-            // Make sure stringVersion only contains 3 values like 4.2.0 but not 4.2.0.2
-            String[] splitVersion = stringVersion.split("\\.");
+            // Make sure stringVersion only contains 3 values like 4.2.0 but not 4.2.0.2.
+            final String[] splitVersion = stringVersion.split("\\.");
             if (splitVersion.length > 3) {
                 stringVersion = splitVersion[0] + "." + splitVersion[1] + "." + splitVersion[2];
             }
 
-            // If the string ends with a dot, remove it
+            // If the string ends with a dot, remove it.
             stringVersion = stringVersion.endsWith(".") ? stringVersion.substring(0, stringVersion.length() - 1) : stringVersion;
 
             return PEVersion.fromString(stringVersion);
+
         }
+
         return null;
+
     }
+
 }

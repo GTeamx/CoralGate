@@ -30,71 +30,89 @@ import java.lang.reflect.Field;
 import java.util.Set;
 
 public class BungeeInjector  {
-    public static String DECODER_NAME = "cg-decoder";
+
+    public static final String DECODER_NAME = "cg-decoder";
     private static final Field LISTENERS_FIELD;
 
     static {
+
         LISTENERS_FIELD = Reflection.getField(ProxyServer.getInstance().getClass(), "listeners");
         LISTENERS_FIELD.setAccessible(true);
+
     }
 
-    public void injectChannel(Channel channel) {
+    public void injectChannel(final Channel channel) {
+
         Field initializerField = null;
         ChannelHandler bootstrapAcceptor = null;
         for (String channelName : channel.pipeline().names()) {
+
             if (channelName.contains("QueryHandler")) {
-                return; // query handler, abort injection
+                return; // query handler, abort injection.
             }
 
-            ChannelHandler handler = channel.pipeline().get(channelName);
-            if (handler == null) continue;
+            final ChannelHandler handler = channel.pipeline().get(channelName);
+            if (handler == null) {
+                continue;
+            }
+
             try {
-                Field f = handler.getClass().getDeclaredField("childHandler");
+
+                final Field f = handler.getClass().getDeclaredField("childHandler");
                 f.setAccessible(true);
                 bootstrapAcceptor = handler;
                 initializerField = f;
-            } catch (Exception ignore) {
-            }
+
+            } catch (final Exception ignored) {}
+
         }
 
         if (bootstrapAcceptor == null) {
+
             bootstrapAcceptor = channel.pipeline().first();
             try {
+
                 initializerField = bootstrapAcceptor.getClass().getDeclaredField("childHandler");
                 initializerField.setAccessible(true);
-            } catch (NoSuchFieldException e) {
+
+            } catch (final NoSuchFieldException e) {
                 throw new RuntimeException(e);
             }
+
         }
 
-        ChannelInitializer<Channel> newInitializer;
+        final ChannelInitializer<Channel> newInitializer;
         try {
             newInitializer = new BungeeChannelInitializer(initializerField.get(bootstrapAcceptor));
-        } catch (IllegalAccessException e) {
+        } catch (final IllegalAccessException e) {
             throw new RuntimeException(e);
         }
 
         try {
             initializerField.set(bootstrapAcceptor, newInitializer);
-        } catch (IllegalAccessException e) {
+        } catch (final IllegalAccessException e) {
             throw new RuntimeException(e);
         }
 
     }
 
     public void inject() {
-        try {
-            Set<Channel> listeners = (Set<Channel>) LISTENERS_FIELD.get(ProxyServer.getInstance());
 
-            for (Channel channel : listeners) {
+        try {
+
+            final Set<Channel> listeners = (Set<Channel>) LISTENERS_FIELD.get(ProxyServer.getInstance());
+
+            for (final Channel channel : listeners) {
                 injectChannel(channel);
             }
 
-            Set<Channel> wrapper = new SetWrapper<>(listeners, this::injectChannel);
+            final Set<Channel> wrapper = new SetWrapper<>(listeners, this::injectChannel);
             LISTENERS_FIELD.set(ProxyServer.getInstance(), wrapper);
 
-        } catch (IllegalAccessException e) {
+        } catch (final IllegalAccessException e) {
             e.printStackTrace();
         }
+
     }
+
 }

@@ -27,27 +27,36 @@ import org.jetbrains.annotations.NotNull;
 import java.lang.reflect.Method;
 
 public class VelocityChannelInitializer extends ChannelInitializer<Channel> {
+
     private static Method INIT_CHANNEL;
     private final ChannelInitializer<Channel> wrappedInitializer;
 
-    public VelocityChannelInitializer(ChannelInitializer<Channel> wrappedInitializer) {
+    public VelocityChannelInitializer(final ChannelInitializer<Channel> wrappedInitializer) {
         this.wrappedInitializer = wrappedInitializer;
     }
 
     @Override
-    protected void initChannel(@NotNull Channel channel) throws Exception {
+    protected void initChannel(final @NotNull Channel channel) throws Exception {
+
         if (INIT_CHANNEL == null) {
+
             INIT_CHANNEL = ChannelInitializer.class.getDeclaredMethod("initChannel", Channel.class);
             INIT_CHANNEL.setAccessible(true);
-        }
-        INIT_CHANNEL.invoke(wrappedInitializer, channel);
 
-        if (PacketEvents.getAPI().isTerminated()) return;
+        }
+
+        INIT_CHANNEL.invoke(this.wrappedInitializer, channel);
+
+        if (PacketEvents.getAPI().isTerminated()) {
+            return;
+        }
+
         ServerConnectionInitializer.initChannel(channel, ConnectionState.HANDSHAKING);
+
     }
 
     public ChannelInitializer<Channel> getWrappedInitializer() {
-        return wrappedInitializer;
+        return this.wrappedInitializer;
     }
 
 }

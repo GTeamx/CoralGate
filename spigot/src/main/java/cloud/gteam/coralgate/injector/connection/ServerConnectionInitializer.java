@@ -31,23 +31,24 @@ import java.util.NoSuchElementException;
 
 public class ServerConnectionInitializer {
 
-    public static void initChannel(Channel ch, ConnectionState connectionState) {
+    public static void initChannel(final Channel ch, final ConnectionState connectionState) {
+
         if (FakeChannelUtil.isFakeChannel(ch)) {
             return;
         }
 
-        User user = new User(ch, connectionState, null, new UserProfile(null, null));
+        relocateHandlers(ch, new User(ch, connectionState, null, new UserProfile(null, null)));
 
-        relocateHandlers(ch, user);
     }
 
-    public static void relocateHandlers(Channel ctx, User user) {
+    public static void relocateHandlers(final Channel ctx, final User user) {
+
         try {
-            SpigotDecoder decoder = new SpigotDecoder(user);
-            ctx.pipeline().addBefore("legacy_query", SpigotInjector.DECODER_NAME, decoder);
-        } catch (NoSuchElementException ex) {
-            String handlers = ChannelHelper.pipelineHandlerNamesAsString(ctx);
-            throw new IllegalStateException("CoralGateInjector failed to add a decoder to the netty pipeline. Pipeline handlers: " + handlers, ex);
+            ctx.pipeline().addBefore("legacy_query", SpigotInjector.DECODER_NAME, new SpigotDecoder(user));
+        } catch (final NoSuchElementException e) {
+            throw new IllegalStateException("CoralGateInjector failed to add a decoder to the netty pipeline. Pipeline handlers: " + ChannelHelper.pipelineHandlerNamesAsString(ctx), e);
         }
+
     }
+
 }

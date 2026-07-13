@@ -26,18 +26,20 @@ import com.github.retrooper.packetevents.protocol.player.UserProfile;
 import io.netty.channel.Channel;
 
 public class ServerConnectionInitializer {
-    public static void addChannelHandlers(Channel channel, VelocityDecoder decoder) {
+
+    public static void addChannelHandlers(final Channel channel, final VelocityDecoder decoder) {
         channel.pipeline().addBefore("legacy-ping-decoder", VelocityInjector.DECODER_NAME, decoder);
     }
 
-    public static void initChannel(Channel channel, ConnectionState state) {
-        User user = new User(channel, state, null, new UserProfile(null, null));
+    public static void initChannel(final Channel channel, final ConnectionState state) {
 
-        VelocityDecoder decoder = new VelocityDecoder(user);
+        final VelocityDecoder decoder = new VelocityDecoder(new User(channel, state, null, new UserProfile(null, null)));
         addChannelHandlers(channel, decoder);
+
     }
 
-    public static void destroyChannel(Channel channel) {
+    public static void destroyChannel(final Channel channel) {
         channel.pipeline().remove(VelocityInjector.DECODER_NAME);
     }
+
 }

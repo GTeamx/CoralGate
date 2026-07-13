@@ -39,9 +39,11 @@ public final class BungeePlugin extends Plugin {
 
     @Override
     public void onLoad() {
-        injector.inject();
-        PacketEvents.getAPI().getEventManager().registerListener(
-                new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
+
+        this.injector.inject();
+
+        PacketEvents.getAPI().getEventManager().registerListener(new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
+
     }
 
     @Override

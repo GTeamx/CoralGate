@@ -36,7 +36,7 @@ import java.util.function.Supplier;
 @ApiStatus.Internal
 public class VelocityInjector {
 
-    public static String DECODER_NAME = "cg-decoder";
+    public static final String DECODER_NAME = "cg-decoder";
 
     private static Class<?> CONNECTION_MANAGER_CLASS, SERVER_INITIALIZER_HOLDER_CLASS;
     private static Method SET_SERVER_INITIALIZER;
@@ -45,67 +45,93 @@ public class VelocityInjector {
 
     private final ProxyServer server;
 
-    public VelocityInjector(ProxyServer server) {
+    public VelocityInjector(final ProxyServer server) {
         this.server = server;
     }
 
     public void inject() {
+
         if (CONNECTION_MANAGER_CLASS == null) {
+
             CONNECTION_MANAGER_CLASS = Reflection.getClassByNameWithoutException("com.velocitypowered.proxy.network.ConnectionManager");
             SERVER_INITIALIZER_HOLDER_CLASS = Reflection.getClassByNameWithoutException("com.velocitypowered.proxy.network.ServerChannelInitializerHolder");
             SET_SERVER_INITIALIZER = Reflection.getMethod(SERVER_INITIALIZER_HOLDER_CLASS, 0, ChannelInitializer.class);
+
         }
-        Supplier<ChannelInitializer<Channel>> initializerHolder = getServerChannelInitializerHolder();
-        ChannelInitializer<Channel> wrappedProxyInitializer = initializerHolder.get();
-        VelocityChannelInitializer initializer = new VelocityChannelInitializer(wrappedProxyInitializer);
+
+        final Supplier<ChannelInitializer<Channel>> initializerHolder = getServerChannelInitializerHolder();
+        final ChannelInitializer<Channel> wrappedProxyInitializer = initializerHolder.get();
+        final VelocityChannelInitializer initializer = new VelocityChannelInitializer(wrappedProxyInitializer);
         try {
+
             SET_SERVER_INITIALIZER.invoke(initializerHolder, initializer);
             hasInjected = true;
-        } catch (IllegalAccessException | InvocationTargetException e) {
+
+        } catch (final IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
         }
+
     }
 
     public void uninject() {
-        Supplier<ChannelInitializer<Channel>> holder = this.getServerChannelInitializerHolder();
+
+        final Supplier<ChannelInitializer<Channel>> holder = this.getServerChannelInitializerHolder();
         ChannelInitializer<?> wrapper = holder.get();
         CheckedConsumer<ChannelInitializer<Channel>, ReflectiveOperationException> uninjector = (initializer) -> {
+
             CorePlugin.getLogger().info("Uninjecting from Velocity channel initializer...");
             SET_SERVER_INITIALIZER.invoke(holder, initializer);
+
         };
 
         try {
+
             while (true) {
-                // Check if it's our initializer, could be wrapped by other plugins
+
+                // Check if it's our initializer, could be wrapped by other plugins.
                 if (wrapper instanceof VelocityChannelInitializer wrappedInitializer) {
+
                     uninjector.accept(wrappedInitializer.getWrappedInitializer());
                     break;
+
                 } else {
-                    // walk up wrapper tree, if possible to find a single matching field
-                    // this accounts for other plugins (e.g. ViaVersion) also replacing the injector, which may
-                    // wrap our already wrapped injector
-                    Field field = Reflection.getField(wrapper.getClass(), ChannelInitializer.class, 0);
+
+                    // Walk up wrapper tree, if possible to find a single matching field.
+                    // This accounts for other plugins (e.g. ViaVersion) also replacing the injector, which may
+                    // wrap our already wrapped injector.
+                    final Field field = Reflection.getField(wrapper.getClass(), ChannelInitializer.class, 0);
                     if (field == null) {
                         throw new IllegalStateException("Can't unwrap foreign channel initializer: " + wrapper);
                     }
+
                     field.setAccessible(true);
-                    ChannelInitializer<?> thisWrapper = wrapper;
+
+                    final ChannelInitializer<?> thisWrapper = wrapper;
                     wrapper = (ChannelInitializer<?>) field.get(thisWrapper);
                     uninjector = initializer -> {
+
                         field.set(thisWrapper, initializer);
                         CorePlugin.getLogger().info("Uninjected from plugin channel initializer " + thisWrapper);
+
                     };
+
                 }
+
             }
-        } catch (ReflectiveOperationException exception) {
-            throw new RuntimeException("Failed to uninject from frontend pipeline", exception);
+
+        } catch (final ReflectiveOperationException e) {
+            throw new RuntimeException("Failed to uninject from frontend pipeline", e);
         }
+
     }
 
     private Supplier<ChannelInitializer<Channel>> getServerChannelInitializerHolder() {
-        ReflectionObject reflectServer = new ReflectionObject(server);
-        Object connectionManager = reflectServer.readObject(0, CONNECTION_MANAGER_CLASS);
-        ReflectionObject reflectConnectionManager = new ReflectionObject(connectionManager);
+
+        final ReflectionObject reflectServer = new ReflectionObject(server);
+        final Object connectionManager = reflectServer.readObject(0, CONNECTION_MANAGER_CLASS);
+        final ReflectionObject reflectConnectionManager = new ReflectionObject(connectionManager);
         return (Supplier<ChannelInitializer<Channel>>) reflectConnectionManager.readObject(0, SERVER_INITIALIZER_HOLDER_CLASS);
+
     }
+
 }

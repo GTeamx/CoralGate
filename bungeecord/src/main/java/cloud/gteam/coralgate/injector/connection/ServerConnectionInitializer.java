@@ -27,18 +27,18 @@ import io.netty.channel.Channel;
 
 public class ServerConnectionInitializer {
 
-    public static void addChannelHandlers(Channel channel, BungeeDecoder decoder) {
+    public static void addChannelHandlers(final Channel channel, final BungeeDecoder decoder) {
         channel.pipeline().addBefore("legacy-decoder", BungeeInjector.DECODER_NAME, decoder);
     }
 
-    public static void initChannel(Channel channel, ConnectionState state) {
-        User user = new User(channel, state, null, new UserProfile(null, null));
+    public static void initChannel(final Channel channel, final ConnectionState state) {
 
-        BungeeDecoder decoder = new BungeeDecoder(user);
+        final BungeeDecoder decoder = new BungeeDecoder(new User(channel, state, null, new UserProfile(null, null)));
         addChannelHandlers(channel, decoder);
+
     }
 
-    public static void destroyChannel(Channel channel) {
+    public static void destroyChannel(final Channel channel) {
         channel.pipeline().remove(BungeeInjector.DECODER_NAME);
     }
 
