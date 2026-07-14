@@ -27,7 +27,7 @@
 
 On-the-fly packet inspection and real-time IP verification for Minecraft servers and networks.
 
-CoralGate acts as a high-performance application firewall for your Minecraft infrastructure. By analyzing incoming packets: malicious payloads, scanners and bots are blocked before they truly reach your server. It secures your servers by spoofing your MOTD to appear as a generic server, checks proper packet order and even checking certain incoming connection fields.
+CoralGate acts as a high-performance application firewall for your Minecraft infrastructure. By analyzing incoming packets: malicious payloads, scanners and bots are blocked before they truly reach your server. It secures your servers by spoofing your MOTD to appear as a generic server, verifies proper packet order and even checks certain incoming connection fields.
 
 If you wish to get support, test or have any questions about CoralGate, make sure to join our [Discord server](https://discord.gteam.cloud)!
 
