@@ -62,9 +62,19 @@ public class SpigotDecoder extends MessageToMessageDecoder<ByteBuf> {
 
     }
 
-    public static void handleServerBoundPacket(final Object channel, final User user, final Object buffer) {
+    public static void handleServerBoundPacket(final Object channel, final User user, final ByteBuf buffer) {
 
         final int preProcessIndex = ByteBufHelper.readerIndex(buffer);
+
+        try {
+            int id = ByteBufHelper.readVarInt(buffer);
+
+            if (id != 0xFE) return;
+        } catch (Exception e) {
+            return;
+        } finally {
+            buffer.readerIndex(preProcessIndex);
+        }
 
         final PacketReceiveEvent packetReceiveEvent = new PacketHandshakeReceiveEvent(channel, user, null, buffer, true);
 

@@ -42,6 +42,16 @@ public class BungeeDecoder extends MessageToMessageDecoder<ByteBuf> {
 
         final int firstReaderIndex = byteBuf.readerIndex();
 
+        try {
+            int id = ByteBufHelper.readVarInt(byteBuf);
+
+            if (id != 0xFE) return;
+        } catch (Exception e) {
+            return;
+        } finally {
+            byteBuf.readerIndex(firstReaderIndex);
+        }
+
         final PacketHandshakeReceiveEvent packetReceiveEvent = new PacketHandshakeReceiveEvent(ctx.channel(), this.user, null, byteBuf, false);
 
         PacketEvents.getAPI().getEventManager().callEvent(packetReceiveEvent, () -> byteBuf.readerIndex(byteBuf.readerIndex()));

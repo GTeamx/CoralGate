@@ -22,6 +22,7 @@ import cloud.gteam.coralgate.injector.connection.ServerConnectionInitializer;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.simple.PacketHandshakeReceiveEvent;
 import com.github.retrooper.packetevents.netty.buffer.ByteBufHelper;
+import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.player.User;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -41,6 +42,16 @@ public class VelocityDecoder extends MessageToMessageDecoder<ByteBuf> {
     public void read(final ChannelHandlerContext ctx, final ByteBuf byteBuf, final List<Object> output) throws Exception {
 
         final int firstReaderIndex = byteBuf.readerIndex();
+
+        try {
+            int id = ByteBufHelper.readVarInt(byteBuf);
+
+            if (id != 0xFE) return;
+        } catch (Exception e) {
+            return;
+        } finally {
+            byteBuf.readerIndex(firstReaderIndex);
+        }
 
         final PacketHandshakeReceiveEvent packetReceiveEvent = new PacketHandshakeReceiveEvent(ctx.channel(), this.user, null, byteBuf, false);
 
