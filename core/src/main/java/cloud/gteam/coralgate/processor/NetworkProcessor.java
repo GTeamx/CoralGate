@@ -30,15 +30,20 @@ import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.packettype.PacketTypeCommon;
 import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 import com.github.retrooper.packetevents.protocol.player.User;
+import com.github.retrooper.packetevents.wrapper.configuration.server.WrapperConfigServerDisconnect;
 import com.github.retrooper.packetevents.wrapper.handshaking.client.WrapperHandshakingClientHandshake;
 import com.github.retrooper.packetevents.wrapper.login.client.WrapperLoginClientLoginStart;
 import com.github.retrooper.packetevents.wrapper.login.server.WrapperLoginServerDisconnect;
 import com.github.retrooper.packetevents.wrapper.login.server.WrapperLoginServerLoginSuccess;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerDisconnect;
 import com.github.retrooper.packetevents.wrapper.status.client.WrapperStatusClientPing;
 import com.github.retrooper.packetevents.wrapper.status.server.WrapperStatusServerPong;
 import com.github.retrooper.packetevents.wrapper.status.server.WrapperStatusServerResponse;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
+import net.kyori.adventure.text.format.TextDecoration;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -144,8 +149,8 @@ public class NetworkProcessor implements PacketListener {
                             ? "Invalid protocol version."
                             : reason;
 
-                    // Don't close the connection yet.
-                    log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, reason, false);
+                    // Don't cancel the packet else the REQUEST/PING fail.
+                    CorePlugin.getLogger().warning(reason + " Keep an eye on " + inetSocketAddress + ". [C->S | " + packetReceiveEvent.getPacketType().getClass().getDeclaringClass().getSimpleName() + "." + packetTypeCommon.getName() + "]");
 
                 }
 
@@ -415,6 +420,8 @@ public class NetworkProcessor implements PacketListener {
         final String ipAddress = inetSocketAddress.getHostString();
         final PacketTypeCommon packetTypeCommon = packetSendEvent.getPacketType();
 
+        System.out.println(packetSendEvent.getPacketType().getClass().getDeclaringClass().getSimpleName() + "." + packetTypeCommon.getName());
+
         // Whitelisted packets.
         if (packetTypeCommon == PacketType.Status.Server.RESPONSE || packetTypeCommon == PacketType.Status.Server.PONG) {
             return;
@@ -523,38 +530,58 @@ public class NetworkProcessor implements PacketListener {
         }
 
         // Fired when a connection is closed.
+        // From the tests I've run, this gets triggered on Spigot/Paper (all the time).
         if (packetTypeCommon == PacketType.Login.Server.DISCONNECT) {
 
             final WrapperLoginServerDisconnect wrapperLoginServerDisconnect = new WrapperLoginServerDisconnect(packetSendEvent);
 
-            final Component disconnectReason = wrapperLoginServerDisconnect.getReason();
-            final String serverVersion = PacketEvents.getAPI().getServerManager().getVersion().getReleaseName();
+            // Process DISCONNECT on a separate function, both PLAY, LOGIN and CONFIGURATION DISCONNECT share the same logic.
+            final Component safeDisconnectReason = processDisconnect(wrapperLoginServerDisconnect.getReason());
 
-            if (disconnectReason instanceof TextComponent) {
+            // Set the new reason and tell packetevents to re-encode the packet and send it.
+            wrapperLoginServerDisconnect.setReason(safeDisconnectReason);
 
-                final TextComponent disconnectReasonTextComponent = (TextComponent) disconnectReason;
-                final String disconnectReasonString = disconnectReasonTextComponent.content();
+            packetSendEvent.markForReEncode(true);
 
-                // Intercept "Outdated server! I'm still on X.XX.X" messages to not show the server's version.
-                if (disconnectReasonString.contains(serverVersion)) {
+            // Block further logic.
+            return;
 
-                    // Replace the real server's version by the spoofed one.
-                    final String newDisconnectReason = disconnectReasonString.replace(serverVersion, "1.21.11");
+        }
 
-                    // Reconstruct reason with spoofed server version.
-                    final Component safeDisconnectReason = Component.text()
-                            .content(newDisconnectReason)
-                            .style(disconnectReasonTextComponent.style())
-                            .build();
+        // Fired when a connection is closed.
+        // From the tests I've run, this gets triggered on Velocity ("Outdated client!")
+        // TODO: Check bungee
+        if (packetTypeCommon == PacketType.Play.Server.DISCONNECT && this.corePlugin.getPlatformProperties().getProperty("platform-name").equals("velocity")) {
 
-                    // Set the new reason and tell packetevents to re-encode the packet and send it.
-                    wrapperLoginServerDisconnect.setReason(safeDisconnectReason);
+            final WrapperPlayServerDisconnect wrapperPlayServerDisconnect = new WrapperPlayServerDisconnect(packetSendEvent);
 
-                    packetSendEvent.markForReEncode(true);
+            // Process DISCONNECT on a separate function, both PLAY, LOGIN and CONFIGURATION DISCONNECT share the same logic.
+            final Component safeDisconnectReason = processDisconnect(wrapperPlayServerDisconnect.getReason());
 
-                }
+            // Set the new reason and tell packetevents to re-encode the packet and send it.
+            wrapperPlayServerDisconnect.setReason(safeDisconnectReason);
 
-            }
+            packetSendEvent.markForReEncode(true);
+
+            // Block further logic.
+            return;
+
+        }
+
+        // Fired when a connection is closed.
+        // From the tests I've run, this gets triggered on Velocity ("Outdated server!")
+        // TODO: Check bungee
+        if (packetTypeCommon == PacketType.Configuration.Server.DISCONNECT && this.corePlugin.getPlatformProperties().getProperty("platform-name").equals("velocity")) {
+
+            final WrapperConfigServerDisconnect wrapperConfigServerDisconnect = new WrapperConfigServerDisconnect(packetSendEvent);
+
+            // Process DISCONNECT on a separate function, both PLAY, LOGIN and CONFIGURATION DISCONNECT share the same logic.
+            final Component safeDisconnectReason = processDisconnect(wrapperConfigServerDisconnect.getReason());
+
+            // Set the new reason and tell packetevents to re-encode the packet and send it.
+            wrapperConfigServerDisconnect.setReason(safeDisconnectReason);
+
+            packetSendEvent.markForReEncode(true);
 
             // Block further logic.
             return;
@@ -681,6 +708,62 @@ public class NetworkProcessor implements PacketListener {
         }
 
         return false;
+
+    }
+
+    private Component processDisconnect(final Component disconnectReason) {
+
+        if (disconnectReason instanceof TextComponent) {
+
+            final TextComponent disconnectReasonTextComponent = (TextComponent) disconnectReason;
+            final String disconnectReasonString = disconnectReasonTextComponent.content();
+
+            // This MUST match every of the normal "Outdated...!" message.
+            // This ensures no server whatsoever can match this kind of kick message.
+            final Style style = disconnectReasonTextComponent.style();
+
+            // All decorations must be NOT_SET.
+            if (style.decoration(TextDecoration.OBFUSCATED) != TextDecoration.State.NOT_SET
+                    || style.decoration(TextDecoration.BOLD) != TextDecoration.State.NOT_SET
+                    || style.decoration(TextDecoration.STRIKETHROUGH) != TextDecoration.State.NOT_SET
+                    || style.decoration(TextDecoration.UNDERLINED) != TextDecoration.State.NOT_SET
+                    || style.decoration(TextDecoration.ITALIC) != TextDecoration.State.NOT_SET) {
+                return disconnectReason;
+            }
+
+            // Color must be exactly Red (#FF5555).
+            if (!NamedTextColor.RED.equals(style.color())) {
+                return disconnectReason;
+            }
+
+            // Click, Hover, Insertion, Font, and Shadow Color must be null/not set.
+            if (style.clickEvent() != null
+                    || style.hoverEvent() != null
+                    || style.insertion() != null
+                    || style.font() != null) {
+                return disconnectReason;
+            }
+
+            // Must have no children.
+            if (!disconnectReasonTextComponent.children().isEmpty()) {
+                return disconnectReason;
+            }
+
+            // Use a regex to match any number and everything after.
+            // This ensures the version is completed changed no matter what's after.
+            // This helps for versions like "1.21.11 Unobfuscated".
+            final String newDisconnectReason = disconnectReasonString.replaceAll("\\d.*", "1.21.11");
+
+            // Reconstruct reason with spoofed server version.
+            return Component.text()
+                    .content(newDisconnectReason)
+                    .style(disconnectReasonTextComponent.style())
+                    .build();
+
+        }
+
+        // In case something fails, but this is unsafe.
+        return disconnectReason;
 
     }
 
