@@ -48,8 +48,9 @@ import net.kyori.adventure.text.format.TextDecoration;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class NetworkProcessor implements PacketListener {
@@ -422,8 +423,6 @@ public class NetworkProcessor implements PacketListener {
         final String ipAddress = inetSocketAddress.getHostString();
         final PacketTypeCommon packetTypeCommon = packetSendEvent.getPacketType();
 
-        System.out.println(packetSendEvent.getPacketType().getClass().getDeclaringClass().getSimpleName() + "." + packetTypeCommon.getName());
-
         // Whitelisted packets.
         if (packetTypeCommon == PacketType.Status.Server.RESPONSE || packetTypeCommon == PacketType.Status.Server.PONG) {
             return;
@@ -532,7 +531,7 @@ public class NetworkProcessor implements PacketListener {
         }
 
         // Fired when a connection is closed.
-        // From the tests I've run, this gets triggered on Spigot/Paper (all the time).
+        // From the tests I've run, this gets triggered on Spigot/Paper (all the time) and BungeeCord ("Outdated server!").
         if (packetTypeCommon == PacketType.Login.Server.DISCONNECT) {
 
             final WrapperLoginServerDisconnect wrapperLoginServerDisconnect = new WrapperLoginServerDisconnect(packetSendEvent);
@@ -551,9 +550,8 @@ public class NetworkProcessor implements PacketListener {
         }
 
         // Fired when a connection is closed.
-        // From the tests I've run, this gets triggered on Velocity ("Outdated client!")
-        // This gets triggered on Bungee
-        if (packetTypeCommon == PacketType.Play.Server.DISCONNECT && (this.corePlugin.getPlatformProperties().getProperty("platform-name").equals("velocity") || this.corePlugin.getPlatformProperties().getProperty("platform-name").equals("bungeecord"))) {
+        // From the tests I've run, this gets triggered on Velocity ("Outdated client!") and BungeeCord ("Outdated client!").
+        if (packetTypeCommon == PacketType.Play.Server.DISCONNECT && PacketEvents.getAPI().getInjector().isProxy()) {
 
             final WrapperPlayServerDisconnect wrapperPlayServerDisconnect = new WrapperPlayServerDisconnect(packetSendEvent);
 
@@ -572,7 +570,6 @@ public class NetworkProcessor implements PacketListener {
 
         // Fired when a connection is closed.
         // From the tests I've run, this gets triggered on Velocity ("Outdated server!")
-        // This doesn't get triggered by Bungee
         if (packetTypeCommon == PacketType.Configuration.Server.DISCONNECT && this.corePlugin.getPlatformProperties().getProperty("platform-name").equals("velocity")) {
 
             final WrapperConfigServerDisconnect wrapperConfigServerDisconnect = new WrapperConfigServerDisconnect(packetSendEvent);
@@ -717,43 +714,124 @@ public class NetworkProcessor implements PacketListener {
 
         if (disconnectReason instanceof TextComponent) {
 
-            TextComponent disconnectReasonTextComponent = (TextComponent) disconnectReason;
-            final String disconnectReasonTextComponentContent = disconnectReasonTextComponent.content();
-            final List<Component> newChildren = new ArrayList<>();
+            final TextComponent disconnectReasonTextComponent = (TextComponent) disconnectReason;
 
-            for (Component childComponent : disconnectReasonTextComponent.children()) {
-                if (childComponent instanceof TextComponent) {
-                    TextComponent childTextComponent = (TextComponent) childComponent;
-                    final String childTextComponentContent = childTextComponent.content();
+            // Spigot, Paper and Velocity work this way.
+            // BungeeCord loooooveeess to do it their way, we have it handle it specifically.
+            // TODO: directly take the kick message from spigot.yml if running on a backend.
+            if (!this.corePlugin.getPlatformProperties().getProperty("platform-name").equals("bungeecord")) {
 
-                    if (childTextComponentContent.contains("Outdated")) {
-                        childTextComponent = childTextComponent.content(childTextComponentContent.replaceAll("\\d.*", "1.21.11"));
+                // This MUST match every of the normal "Outdated...!" message.
+                // This ensures no server whatsoever can match this kind of kick message.
+                final Style style = disconnectReasonTextComponent.style();
+
+                // Determine expected color based on server type.
+                // If it's directly running on a backend, it's white (null) by default.
+                // On Velocity, it's red by default.
+                final NamedTextColor expectedNamedTextColor = (PacketEvents.getAPI().getInjector().isProxy()
+                        ? NamedTextColor.RED
+                        : null);
+
+                // Style must be clean/default and color must be exactly Red (#FF5555).
+                if (!isCleanStyle(style) || !Objects.equals(style.color(), expectedNamedTextColor)) {
+                    return disconnectReason;
+                }
+
+                // Must have no children.
+                if (!disconnectReasonTextComponent.children().isEmpty()) {
+                    return disconnectReason;
+                }
+
+                final String disconnectReasonString = disconnectReasonTextComponent.content();
+
+                // Determine regex based on server type.
+                // If it's directly running on a backend, it's safe to assume the server version is used in the kick message.
+                // However, on Velocity this isn't the case.
+                final String versionRegex = (PacketEvents.getAPI().getInjector().isProxy()
+                        ? "\\d.*"
+                        : PacketEvents.getAPI().getServerManager().getVersion().getReleaseName().replace(".", "\\.") + ".*");
+
+                // Use a regex to match any number and everything after.
+                // This ensures the version is completed changed no matter what's after.
+                // This helps for versions like "1.21.11 Unobfuscated".
+                final String newDisconnectReason = disconnectReasonString.replaceAll(versionRegex, "1.21.11");
+
+                // Reconstruct reason with spoofed server version.
+                return Component.text()
+                        .content(newDisconnectReason)
+                        .style(disconnectReasonTextComponent.style())
+                        .build();
+
+
+            // Specific logic for BungeeCord nested kick messages.
+            } else {
+
+                // BungeeCord nested kick message layout handling
+                final List<Component> children = disconnectReasonTextComponent.children();
+
+                // A classic native kick structure requires the root to have exactly 2 children:
+                // Child 0: "Kicked whilst connecting to lobby: " (Red).
+                // Child 1: "Outdated client! Please use 1.20.1" (White).
+                if (children.size() != 2) {
+                    return disconnectReason;
+                }
+
+                final Component kickMessage = children.get(0);
+                final Component outdatedMessage = children.get(1);
+
+                if (kickMessage instanceof TextComponent && outdatedMessage instanceof TextComponent) {
+
+                    final TextComponent kickMessageTextComponent = (TextComponent) kickMessage;
+                    final TextComponent outdatedMessageTextComponent = (TextComponent) outdatedMessage;
+
+                    // This MUST match every of the normal "Outdated...!" message.
+                    // This ensures no server whatsoever can match this kind of kick message.
+                    final Style kickMessageStyle = kickMessageTextComponent.style();
+                    final Style outdatedMessageStyle = outdatedMessageTextComponent.style();
+
+                    // Style must be clean/default and color must be exactly Red (#FF5555).
+                    if (!isCleanStyle(kickMessageStyle) || !NamedTextColor.RED.equals(kickMessageStyle.color())) {
+                        return disconnectReason;
                     }
 
-                    newChildren.add(childTextComponent);
+                    // Style must be clean/default and color must be exactly White (#FFFFFF).
+                    if (!isCleanStyle(outdatedMessageStyle) || !NamedTextColor.WHITE.equals(outdatedMessageStyle.color())) {
+                        return disconnectReason;
+                    }
 
-                } else {
+                    final String disconnectReasonString = outdatedMessageTextComponent.content();
 
-                    newChildren.add(childComponent);
+                    // Use a regex to match any number and everything after.
+                    // This ensures the version is completed changed no matter what's after.
+                    // This helps for versions like "1.21.11 Unobfuscated".
+                    final String newDisconnectReason = disconnectReasonString.replaceAll("\\d.*", "1.21.11");
+                    final TextComponent newOutdatedMessageTextComponent = outdatedMessageTextComponent.content(newDisconnectReason);
+
+                    // Reconstruct reason with spoofed server version.
+                    return disconnectReasonTextComponent.children(Arrays.asList(kickMessageTextComponent, newOutdatedMessageTextComponent));
 
                 }
 
             }
-
-            disconnectReasonTextComponent = disconnectReasonTextComponent.children(newChildren);
-
-            if (disconnectReasonTextComponentContent.contains("Outdated")) {
-                disconnectReasonTextComponent = disconnectReasonTextComponent.content(disconnectReasonTextComponentContent.replaceAll("\\d.*", "1.21.11"));
-            }
-
-            // Reconstruct reason with spoofed server version.
-            return disconnectReasonTextComponent;
 
         }
 
         // In case something fails, but this is unsafe.
         return disconnectReason;
 
+    }
+
+    // Made for less repetitiveness across the processDisconnect function.
+    private boolean isCleanStyle(final Style style) {
+        return style.decoration(TextDecoration.OBFUSCATED) == TextDecoration.State.NOT_SET
+                && style.decoration(TextDecoration.BOLD) == TextDecoration.State.NOT_SET
+                && style.decoration(TextDecoration.STRIKETHROUGH) == TextDecoration.State.NOT_SET
+                && style.decoration(TextDecoration.UNDERLINED) == TextDecoration.State.NOT_SET
+                && style.decoration(TextDecoration.ITALIC) == TextDecoration.State.NOT_SET
+                && style.clickEvent() == null
+                && style.hoverEvent() == null
+                && style.insertion() == null
+                && style.font() == null;
     }
 
 }
