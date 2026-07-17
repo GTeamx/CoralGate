@@ -16,7 +16,7 @@ spigot = "1.8.8-R0.1-SNAPSHOT"
 bungeecord = "1.16-R0.4"
 velocity = "3.4.0"
 
-shadow = "9.5.1"
+shadow = "9.6.0"
 
 [libraries]
 
