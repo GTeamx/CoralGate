@@ -48,6 +48,8 @@ import net.kyori.adventure.text.format.TextDecoration;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class NetworkProcessor implements PacketListener {
@@ -154,8 +156,8 @@ public class NetworkProcessor implements PacketListener {
 
                 }
 
-            // Drop the packet if it's suspicious, close connection if it's invalid.
-            // Only if it's a LOGIN packet.
+                // Drop the packet if it's suspicious, close connection if it's invalid.
+                // Only if it's a LOGIN packet.
             } else if (wrapperHandshakingClientHandshake.getIntention() == WrapperHandshakingClientHandshake.ConnectionIntention.LOGIN
                     && wrapperHandshakingClientHandshake.getNextConnectionState() == ConnectionState.LOGIN) {
 
@@ -170,7 +172,7 @@ public class NetworkProcessor implements PacketListener {
                     // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
                     log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, reason, true);
 
-                // Log an alert but don't close the connection.
+                    // Log an alert but don't close the connection.
                 } else if (isSuspiciousPort) {
 
                     // Don't cancel the packet else the LOGIN_START procedure fails.
@@ -550,8 +552,8 @@ public class NetworkProcessor implements PacketListener {
 
         // Fired when a connection is closed.
         // From the tests I've run, this gets triggered on Velocity ("Outdated client!")
-        // TODO: Check bungee
-        if (packetTypeCommon == PacketType.Play.Server.DISCONNECT && this.corePlugin.getPlatformProperties().getProperty("platform-name").equals("velocity")) {
+        // This gets triggered on Bungee
+        if (packetTypeCommon == PacketType.Play.Server.DISCONNECT && (this.corePlugin.getPlatformProperties().getProperty("platform-name").equals("velocity") || this.corePlugin.getPlatformProperties().getProperty("platform-name").equals("bungeecord"))) {
 
             final WrapperPlayServerDisconnect wrapperPlayServerDisconnect = new WrapperPlayServerDisconnect(packetSendEvent);
 
@@ -570,7 +572,7 @@ public class NetworkProcessor implements PacketListener {
 
         // Fired when a connection is closed.
         // From the tests I've run, this gets triggered on Velocity ("Outdated server!")
-        // TODO: Check bungee
+        // This doesn't get triggered by Bungee
         if (packetTypeCommon == PacketType.Configuration.Server.DISCONNECT && this.corePlugin.getPlatformProperties().getProperty("platform-name").equals("velocity")) {
 
             final WrapperConfigServerDisconnect wrapperConfigServerDisconnect = new WrapperConfigServerDisconnect(packetSendEvent);
@@ -715,50 +717,37 @@ public class NetworkProcessor implements PacketListener {
 
         if (disconnectReason instanceof TextComponent) {
 
-            final TextComponent disconnectReasonTextComponent = (TextComponent) disconnectReason;
-            final String disconnectReasonString = disconnectReasonTextComponent.content();
+            TextComponent disconnectReasonTextComponent = (TextComponent) disconnectReason;
+            final String disconnectReasonTextComponentContent = disconnectReasonTextComponent.content();
+            final List<Component> newChildren = new ArrayList<>();
 
-            // This MUST match every of the normal "Outdated...!" message.
-            // This ensures no server whatsoever can match this kind of kick message.
-            final Style style = disconnectReasonTextComponent.style();
+            for (Component childComponent : disconnectReasonTextComponent.children()) {
+                if (childComponent instanceof TextComponent) {
+                    TextComponent childTextComponent = (TextComponent) childComponent;
+                    final String childTextComponentContent = childTextComponent.content();
 
-            // All decorations must be NOT_SET.
-            if (style.decoration(TextDecoration.OBFUSCATED) != TextDecoration.State.NOT_SET
-                    || style.decoration(TextDecoration.BOLD) != TextDecoration.State.NOT_SET
-                    || style.decoration(TextDecoration.STRIKETHROUGH) != TextDecoration.State.NOT_SET
-                    || style.decoration(TextDecoration.UNDERLINED) != TextDecoration.State.NOT_SET
-                    || style.decoration(TextDecoration.ITALIC) != TextDecoration.State.NOT_SET) {
-                return disconnectReason;
+                    if (childTextComponentContent.contains("Outdated")) {
+                        childTextComponent = childTextComponent.content(childTextComponentContent.replaceAll("\\d.*", "1.21.11"));
+                    }
+
+                    newChildren.add(childTextComponent);
+
+                } else {
+
+                    newChildren.add(childComponent);
+
+                }
+
             }
 
-            // Color must be exactly Red (#FF5555).
-            if (!NamedTextColor.RED.equals(style.color())) {
-                return disconnectReason;
-            }
+            disconnectReasonTextComponent = disconnectReasonTextComponent.children(newChildren);
 
-            // Click, Hover, Insertion, Font, and Shadow Color must be null/not set.
-            if (style.clickEvent() != null
-                    || style.hoverEvent() != null
-                    || style.insertion() != null
-                    || style.font() != null) {
-                return disconnectReason;
+            if (disconnectReasonTextComponentContent.contains("Outdated")) {
+                disconnectReasonTextComponent = disconnectReasonTextComponent.content(disconnectReasonTextComponentContent.replaceAll("\\d.*", "1.21.11"));
             }
-
-            // Must have no children.
-            if (!disconnectReasonTextComponent.children().isEmpty()) {
-                return disconnectReason;
-            }
-
-            // Use a regex to match any number and everything after.
-            // This ensures the version is completed changed no matter what's after.
-            // This helps for versions like "1.21.11 Unobfuscated".
-            final String newDisconnectReason = disconnectReasonString.replaceAll("\\d.*", "1.21.11");
 
             // Reconstruct reason with spoofed server version.
-            return Component.text()
-                    .content(newDisconnectReason)
-                    .style(disconnectReasonTextComponent.style())
-                    .build();
+            return disconnectReasonTextComponent;
 
         }
 
