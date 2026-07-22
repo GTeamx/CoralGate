@@ -22,6 +22,7 @@ import cloud.gteam.coralgate.commands.CoralGateCommand;
 import cloud.gteam.coralgate.commands.VelocityPermissionChecker;
 import cloud.gteam.coralgate.commands.permissions.PermissionFactory;
 import cloud.gteam.coralgate.injector.VelocityInjector;
+import cloud.gteam.coralgate.injector.handlers.VelocityNettyResponder;
 import cloud.gteam.coralgate.processor.NetworkProcessor;
 import cloud.gteam.coralgate.utils.ConfigUtils;
 import cloud.gteam.coralgate.utils.PlatformUtils;
@@ -81,7 +82,7 @@ public final class VelocityPlugin {
                 new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
 
         // Load core.
-        this.corePlugin.onEnable(Logger.getLogger("CoralGate"), this.dataDirectory.toFile(), ConfigUtils.isOnlineMode("velocity.toml"), "velocity.toml", PlatformUtils.loadProperties(this.getClass()));
+        this.corePlugin.onEnable(Logger.getLogger("CoralGate"), this.dataDirectory.toFile(), ConfigUtils.isOnlineMode("velocity.toml"), "velocity.toml", PlatformUtils.loadProperties(this.getClass()), new VelocityNettyResponder());
 
     }
 

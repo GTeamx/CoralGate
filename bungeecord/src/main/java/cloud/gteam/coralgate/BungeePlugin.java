@@ -22,6 +22,7 @@ import cloud.gteam.coralgate.commands.BungeePermissionChecker;
 import cloud.gteam.coralgate.commands.CoralGateCommand;
 import cloud.gteam.coralgate.commands.permissions.PermissionFactory;
 import cloud.gteam.coralgate.injector.BungeeInjector;
+import cloud.gteam.coralgate.injector.handlers.BungeeNettyResponder;
 import cloud.gteam.coralgate.processor.NetworkProcessor;
 import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -53,7 +54,7 @@ public final class BungeePlugin extends Plugin {
         new Metrics(this, 29439);
 
         // Load core.
-        this.corePlugin.onEnable(this.getLogger(), getDataFolder(), this.getProxy().getConfig().isOnlineMode(), "config.yml", PlatformUtils.loadProperties(this.getClass()));
+        this.corePlugin.onEnable(this.getLogger(), getDataFolder(), this.getProxy().getConfig().isOnlineMode(), "config.yml", PlatformUtils.loadProperties(this.getClass()), new BungeeNettyResponder());
 
         // Load commands.
         final Lamp<BungeeCommandActor> bukkitCommandActor = BungeeLamp.builder(this)

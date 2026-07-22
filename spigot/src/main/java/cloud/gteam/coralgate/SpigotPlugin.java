@@ -22,6 +22,7 @@ import cloud.gteam.coralgate.commands.CoralGateCommand;
 import cloud.gteam.coralgate.commands.SpigotPermissionChecker;
 import cloud.gteam.coralgate.commands.permissions.PermissionFactory;
 import cloud.gteam.coralgate.injector.SpigotInjector;
+import cloud.gteam.coralgate.injector.handlers.SpigotNettyResponder;
 import cloud.gteam.coralgate.processor.NetworkProcessor;
 import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -76,7 +77,7 @@ public final class SpigotPlugin extends JavaPlugin {
         } catch (final ClassNotFoundException ignored) {}
 
         // Load core.
-        this.corePlugin.onEnable(this.getLogger(), getDataFolder(), Bukkit.getOnlineMode(), "server.properties", platformProperties);
+        this.corePlugin.onEnable(this.getLogger(), getDataFolder(), Bukkit.getOnlineMode(), "server.properties", platformProperties, new SpigotNettyResponder());
 
         // Load commands.
         final Lamp<BukkitCommandActor> bukkitCommandActor = BukkitLamp.builder(this)
