@@ -65,15 +65,39 @@ public class SpigotDecoder extends MessageToMessageDecoder<ByteBuf> {
     public static void handleServerBoundPacket(final Object channel, final User user, final ByteBuf buffer) {
 
         final int preProcessIndex = ByteBufHelper.readerIndex(buffer);
+        final int readable = ByteBufHelper.readableBytes(buffer);
+        boolean isLegacyServerListPing = false;
 
-        try {
-            int id = ByteBufHelper.readVarInt(buffer);
+        // Detect every legacy server list ping variant by peeking bytes directly (never consuming
+        // the reader index), rather than parsing a VarInt. A VarInt read would throw on the
+        // single-byte pre-1.4 variant since there's no second byte to complete it.
+        if (readable >= 1 && ByteBufHelper.getUnsignedByte(buffer, preProcessIndex) == 0xFE) {
 
-            if (id != 0xFE) return;
-        } catch (Exception e) {
+            // Bare single 0xFE, nothing trailing, pre-1.4 clients (1.1, 1.2, 1.3).
+            if (readable == 1) {
+
+                isLegacyServerListPing = true;
+
+            } else if (ByteBufHelper.getUnsignedByte(buffer, preProcessIndex + 1) == 0x01) {
+
+                if (readable == 2) {
+
+                    // FE 01, nothing trailing, 1.4/1.5 clients.
+                    isLegacyServerListPing = true;
+
+                } else if (readable >= 3 && ByteBufHelper.getUnsignedByte(buffer, preProcessIndex + 2) == 0xFA) {
+
+                    // FE 01 FA ..., 1.6 clients.
+                    isLegacyServerListPing = true;
+
+                }
+
+            }
+
+        }
+
+        if (!isLegacyServerListPing) {
             return;
-        } finally {
-            buffer.readerIndex(preProcessIndex);
         }
 
         final PacketReceiveEvent packetReceiveEvent = new PacketHandshakeReceiveEvent(channel, user, null, buffer, true);
