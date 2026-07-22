@@ -22,7 +22,7 @@ import cloud.gteam.coralgate.injector.NettyResponder;
 import com.github.retrooper.packetevents.protocol.player.User;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 
 import java.nio.charset.StandardCharsets;
 
@@ -63,7 +63,7 @@ public class BungeeNettyResponder implements NettyResponder {
 
         channel.pipeline().firstContext()
                 .writeAndFlush(buf)
-                .addListener((ChannelFuture f) -> f.channel().close());
+                .addListener(ChannelFutureListener.CLOSE);
 
     }
 
