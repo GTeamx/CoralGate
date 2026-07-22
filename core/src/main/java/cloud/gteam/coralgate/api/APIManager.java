@@ -86,7 +86,7 @@ public class APIManager {
 
     public boolean isIpCached(final String ipAddress) {
         final CacheEntry entry = this.ipCache.get(ipAddress);
-        return entry != null && entry.isExpired(this.cacheTime);
+        return entry != null && !entry.isExpired(this.cacheTime);
     }
 
     public boolean isIpCachedBlocked(final String ipAddress) {
