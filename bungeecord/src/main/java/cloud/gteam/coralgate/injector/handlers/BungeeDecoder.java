@@ -41,37 +41,75 @@ public class BungeeDecoder extends MessageToMessageDecoder<ByteBuf> {
     public void read(final ChannelHandlerContext ctx, final ByteBuf byteBuf, final List<Object> output) throws Exception {
 
         final int firstReaderIndex = byteBuf.readerIndex();
+        final int readable = byteBuf.readableBytes();
 
-        try {
-            int id = ByteBufHelper.readVarInt(byteBuf);
+        boolean isLegacyServerListPing = false;
+        boolean isBareSingleByte = false;
 
-            if (id != 0xFE) return;
-        } catch (Exception e) {
-            return;
-        } finally {
-            byteBuf.readerIndex(firstReaderIndex);
-        }
+        // Detect every legacy server list ping variant by peeking bytes directly (never consuming
+        // the reader index), rather than parsing a VarInt. A VarInt read would throw on the
+        // single-byte pre-1.4 variant since there's no second byte to complete it.
+        if (readable >= 1 && byteBuf.getUnsignedByte(firstReaderIndex) == 0xFE) {
 
-        final PacketHandshakeReceiveEvent packetReceiveEvent = new PacketHandshakeReceiveEvent(ctx.channel(), this.user, null, byteBuf, false);
+            // Bare single 0xFE, nothing trailing, pre-1.4 clients (1.1, 1.2, 1.3).
+            if (readable == 1) {
 
-        PacketEvents.getAPI().getEventManager().callEvent(packetReceiveEvent, () -> byteBuf.readerIndex(byteBuf.readerIndex()));
-        if (!packetReceiveEvent.isCancelled()) {
+                isLegacyServerListPing = true;
 
-            if (packetReceiveEvent.getLastUsedWrapper() != null) {
+                // Bare single 0xFE, pre-1.4 clients (1.1, 1.2, 1.3).
+                // NOTE: packetevents' PacketHandshakeReceiveEvent/ProtocolPacketEvent cannot be
+                // constructed for a 1-byte buffer (it throws trying to read a packet id), so this
+                // variant is handled directly here and never routed through the event system.
+                isBareSingleByte = true;
 
-                ByteBufHelper.clear(byteBuf);
-                packetReceiveEvent.getLastUsedWrapper().writeVarInt(packetReceiveEvent.getPacketId());
-                packetReceiveEvent.getLastUsedWrapper().write();
+            } else if (byteBuf.getUnsignedByte(firstReaderIndex + 1) == 0x01) {
+
+                if (readable == 2) {
+
+                    // FE 01, nothing trailing, 1.4/1.5 clients.
+                    isLegacyServerListPing = true;
+
+                } else if (readable >= 3 && byteBuf.getUnsignedByte(firstReaderIndex + 2) == 0xFA) {
+
+                    // FE 01 FA ..., 1.6 clients.
+                    isLegacyServerListPing = true;
+
+                }
 
             }
 
-            byteBuf.readerIndex(firstReaderIndex);
-            output.add(byteBuf.retain());
+        }
 
+        if (!isLegacyServerListPing) {
+
+            output.add(byteBuf.retain());
+            return;
+
+        }
+
+        if (isBareSingleByte) {
+
+            // Can't fire a PacketHandshakeReceiveEvent for this, just drop it silently.
+            // If you need NetworkProcessor to see/respond to this variant too, that logic
+            // needs to move here instead (can't go through packetevents' event system).
+            ByteBufHelper.clear(byteBuf);
+            return;
+
+        }
+
+        final PacketHandshakeReceiveEvent packetReceiveEvent = new PacketHandshakeReceiveEvent(ctx.channel(), this.user, null, byteBuf, false);
+        PacketEvents.getAPI().getEventManager().callEvent(packetReceiveEvent, () -> byteBuf.readerIndex(byteBuf.readerIndex()));
+
+        // No action is taken about the legacy packet here.
+        // NetworkProcessor receives the packet (like any other packet), and then decides what to do,
+        // including which legacy reply format to use (it re-derives that from the buffer itself).
+        // If the packet is canceled, it's cleared. Else we just pass it as any normal packet would.
+        if (packetReceiveEvent.isCancelled()) {
+            ByteBufHelper.clear(byteBuf);
         } else {
 
-            // Cancelling the packet, lets clear the buffer.
-            ByteBufHelper.clear(byteBuf);
+            byteBuf.readerIndex(firstReaderIndex);
+            output.add(byteBuf.retain());
 
         }
 
