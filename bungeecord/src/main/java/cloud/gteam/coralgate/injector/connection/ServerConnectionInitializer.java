@@ -20,6 +20,7 @@ package cloud.gteam.coralgate.injector.connection;
 
 import cloud.gteam.coralgate.injector.BungeeInjector;
 import cloud.gteam.coralgate.injector.handlers.BungeeDecoder;
+import cloud.gteam.coralgate.injector.handlers.BungeeLegacyKickRewriter;
 import com.github.retrooper.packetevents.protocol.ConnectionState;
 import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.protocol.player.UserProfile;
@@ -29,6 +30,7 @@ public class ServerConnectionInitializer {
 
     public static void addChannelHandlers(final Channel channel, final BungeeDecoder decoder) {
         channel.pipeline().addBefore("legacy-decoder", BungeeInjector.DECODER_NAME, decoder);
+        channel.pipeline().addFirst("cg-legacy-kick-rewriter", new BungeeLegacyKickRewriter());
     }
 
     public static void initChannel(final Channel channel, final ConnectionState state) {
