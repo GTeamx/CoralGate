@@ -110,7 +110,7 @@ public class BungeeInjector  {
             LISTENERS_FIELD.set(ProxyServer.getInstance(), wrapper);
 
         } catch (final IllegalAccessException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Failed to inject custom listeners into ProxyServer instance. See error: ", e);
         }
 
     }
