@@ -1,0 +1,45 @@
+/*
+ * This file is part of packetevents - https://github.com/retrooper/packetevents
+ * Copyright (C) 2022 retrooper and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package cloud.gteam.coralgate.injector.connection;
+
+import cloud.gteam.coralgate.injector.VelocityInjector;
+import cloud.gteam.coralgate.injector.handlers.VelocityDecoder;
+import com.github.retrooper.packetevents.protocol.ConnectionState;
+import com.github.retrooper.packetevents.protocol.player.User;
+import com.github.retrooper.packetevents.protocol.player.UserProfile;
+import io.netty.channel.Channel;
+
+public class ServerConnectionInitializer {
+
+    public static void addChannelHandlers(final Channel channel, final VelocityDecoder decoder) {
+        channel.pipeline().addBefore("legacy-ping-decoder", VelocityInjector.DECODER_NAME, decoder);
+    }
+
+    public static void initChannel(final Channel channel, final ConnectionState state) {
+
+        final VelocityDecoder decoder = new VelocityDecoder(new User(channel, state, null, new UserProfile(null, null)));
+        addChannelHandlers(channel, decoder);
+
+    }
+
+    public static void destroyChannel(final Channel channel) {
+        channel.pipeline().remove(VelocityInjector.DECODER_NAME);
+    }
+
+}

@@ -21,6 +21,8 @@ package cloud.gteam.coralgate;
 import cloud.gteam.coralgate.commands.CoralGateCommand;
 import cloud.gteam.coralgate.commands.VelocityPermissionChecker;
 import cloud.gteam.coralgate.commands.permissions.PermissionFactory;
+import cloud.gteam.coralgate.injector.VelocityInjector;
+import cloud.gteam.coralgate.injector.handlers.VelocityNettyResponder;
 import cloud.gteam.coralgate.processor.NetworkProcessor;
 import cloud.gteam.coralgate.utils.ConfigUtils;
 import cloud.gteam.coralgate.utils.PlatformUtils;
@@ -44,7 +46,7 @@ import java.util.logging.Logger;
 public final class VelocityPlugin {
 
     private final CorePlugin corePlugin = new CorePlugin();
-
+    private final VelocityInjector injector;
     private final Path dataDirectory;
     private final Metrics.Factory metricsFactory;
 
@@ -54,6 +56,8 @@ public final class VelocityPlugin {
         this.dataDirectory = dataDirectory;
         // Load bStats metrics factory.
         this.metricsFactory = metricsFactory;
+
+        this.injector = new VelocityInjector(proxyServer);
 
         // Load commands.
         final Lamp<VelocityCommandActor> lamp = VelocityLamp.builder(this, proxyServer)
@@ -68,6 +72,8 @@ public final class VelocityPlugin {
     @Subscribe
     public void onProxyInitialization(final ProxyInitializeEvent proxyInitializeEvent) {
 
+        this.injector.inject();
+
         // Start bStats.
         this.metricsFactory.make(this, 29439);
 
@@ -76,12 +82,14 @@ public final class VelocityPlugin {
                 new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
 
         // Load core.
-        this.corePlugin.onEnable(Logger.getLogger("CoralGate"), this.dataDirectory.toFile(), ConfigUtils.isOnlineMode("velocity.toml"), "velocity.toml", PlatformUtils.loadProperties(this.getClass()));
+        this.corePlugin.onEnable(Logger.getLogger("CoralGate"), this.dataDirectory.toFile(), ConfigUtils.isOnlineMode("velocity.toml"), "velocity.toml", PlatformUtils.loadProperties(this.getClass()), new VelocityNettyResponder());
 
     }
 
     @Subscribe
     public void onProxyShutdown(final ProxyShutdownEvent proxyShutdownEvent) {
+
+        this.injector.uninject();
 
         this.corePlugin.onDisable();
 

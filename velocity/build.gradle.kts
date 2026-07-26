@@ -8,7 +8,7 @@ plugins {
 java {
 
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+        languageVersion = JavaLanguageVersion.of(17)
     }
 
     sourceCompatibility = JavaVersion.VERSION_17
@@ -41,7 +41,7 @@ dependencies {
     compileOnly(libs.velocity.api)
 
     // Core implementation.
-    implementation(project(":core"))
+    compileOnly(project(":core"))
 
 }
 
@@ -60,6 +60,14 @@ tasks.processResources {
 
 }
 
+// A trick so netty used by async-http-client is always
+// relocated, but netty used by injector is always provided by platform (spigot, bungeecord, velocity)
+val coreProvider = provider { project(":core").tasks.shadowJar.flatMap { it.archiveFile } }
+
+tasks.jar {
+    enabled = false // only shadowJar is used
+}
+
 tasks.shadowJar {
 
     // Wait for the core shadowJar to finish.
@@ -68,6 +76,8 @@ tasks.shadowJar {
     archiveBaseName = "CoralGate-Velocity"
     archiveVersion = project.version.toString()
     archiveClassifier = ""
+
+    from(zipTree(coreProvider)) // include shadowed core
 
     // Relocate bStats.
     relocate("org.bstats", "cloud.gteam.coralgate.libs.bstats")

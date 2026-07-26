@@ -11,7 +11,7 @@ version = libs.versions.coreVersion.get()
 java {
 
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(8))
+        languageVersion = JavaLanguageVersion.of(8)
     }
 
     sourceCompatibility = JavaVersion.VERSION_1_8
@@ -54,11 +54,16 @@ tasks.processResources {
 
 }
 
+tasks.jar {
+    enabled = false // only shadowJar is used
+}
+
 tasks.shadowJar {
 
     archiveClassifier = "" // produce core.jar instead of core-all.jar
 
     relocate("dev.dejvokep.boostedyaml", "cloud.gteam.coralgate.libs.boostedyaml")
+    relocate("io.netty", "cloud.gteam.coralgate.libs.netty")
 
     filesMatching("META-INF/*.kotlin_module") {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE

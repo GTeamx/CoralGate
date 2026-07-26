@@ -31,7 +31,7 @@ import java.io.InputStream;
 
 public class ConfigManager {
 
-    private final String latestConfigVersion = "0.2.2";
+    private final String latestConfigVersion = "0.2.3";
 
     private final String configFileName;
     private final File configFile;

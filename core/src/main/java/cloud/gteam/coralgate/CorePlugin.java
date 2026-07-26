@@ -20,6 +20,7 @@ package cloud.gteam.coralgate;
 
 import cloud.gteam.coralgate.api.APIManager;
 import cloud.gteam.coralgate.config.ConfigManager;
+import cloud.gteam.coralgate.injector.NettyResponder;
 import cloud.gteam.coralgate.update.UpdateChecker;
 import cloud.gteam.coralgate.utils.ConfigUtils;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -41,11 +42,13 @@ public final class CorePlugin {
 
     private Properties platformProperties;
 
+    private NettyResponder nettyResponder;
+
     private ConfigManager configManager;
     private APIManager apiManager;
     private UpdateChecker updateChecker;
 
-    public void onEnable(final Logger logger, final File dataFolder, final boolean onlineMode, final String configFileName, final Properties platformProperties) {
+    public void onEnable(final Logger logger, final File dataFolder, final boolean onlineMode, final String configFileName, final Properties platformProperties, final NettyResponder nettyResponder) {
 
         CorePlugin.logger = logger;
 
@@ -54,6 +57,8 @@ public final class CorePlugin {
         this.platformProperties = platformProperties;
 
         logger.info("Loading platform '" + platformProperties.getProperty("platform-name") + "' version '" + platformProperties.getProperty("platform-version") + "', implemented against core version '" + platformProperties.getProperty("core-version") + "'...");
+
+        this.nettyResponder = nettyResponder;
 
         final String peCoreVersion = platformProperties.getProperty("packetevents-version");
         final String peServerVersion = PacketEvents.getAPI().getVersion().toString();
@@ -152,6 +157,10 @@ public final class CorePlugin {
 
     public Properties getPlatformProperties() {
         return this.platformProperties;
+    }
+
+    public NettyResponder getNettyResponder() {
+        return this.nettyResponder;
     }
 
     public ConfigManager getConfigManager() {

@@ -19,12 +19,14 @@
 package cloud.gteam.coralgate.processor;
 
 import cloud.gteam.coralgate.CorePlugin;
+import cloud.gteam.coralgate.injector.NettyResponder;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListener;
 import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
 import com.github.retrooper.packetevents.event.UserDisconnectEvent;
 import com.github.retrooper.packetevents.manager.server.ServerVersion;
+import com.github.retrooper.packetevents.netty.buffer.ByteBufHelper;
 import com.github.retrooper.packetevents.protocol.ConnectionState;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.packettype.PacketTypeCommon;
@@ -80,8 +82,7 @@ public class NetworkProcessor implements PacketListener {
         // Match MOTD related packets.
         final boolean isMOTDPacket = packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE
                 || packetTypeCommon == PacketType.Status.Client.REQUEST
-                || packetTypeCommon == PacketType.Status.Client.PING
-                || packetTypeCommon == PacketType.Handshaking.Client.LEGACY_SERVER_LIST_PING;
+                || packetTypeCommon == PacketType.Status.Client.PING;
 
         // Match login sequence related packets.
         final boolean isLoginSequencePacket = packetTypeCommon == PacketType.Handshaking.Client.HANDSHAKE
@@ -97,7 +98,9 @@ public class NetworkProcessor implements PacketListener {
 
             // If the client's version/protocol version is invalid.
             //noinspection ConstantValue
-            if (packetReceiveEvent.getUser().getClientVersion() == null || packetReceiveEvent.getUser().getClientVersion().getProtocolVersion() <= 4) {
+            if (packetReceiveEvent.getUser().getClientVersion() == null
+                    || packetReceiveEvent.getUser().getClientVersion().getProtocolVersion() < ClientVersion.getOldest().getProtocolVersion()
+                    || packetReceiveEvent.getUser().getClientVersion().getProtocolVersion() > ClientVersion.getLatest().getProtocolVersion()) {
 
                 // Log the violation, report the IP to CoralGate API, cancel the packet and close the connection.
                 log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, "Invalid protocol version.", !isMOTDPacket);
@@ -271,14 +274,40 @@ public class NetworkProcessor implements PacketListener {
 
         }
 
-        // TODO: find some way to block this cuz PE ain't seeing the goddamn packet
-        // TODO: Netty pipeline injection?
         // Legacy ping exposes information like MOTD, version & player count.
-        // No wrapper exists for it so we'll have to drop the packet.
+        // We have to use the NettyResponder to send packet a forged (or not) response.
         if (packetTypeCommon == PacketType.Handshaking.Client.LEGACY_SERVER_LIST_PING) {
 
-            // Cancel the packet.
-            packetReceiveEvent.setCancelled(true);
+            // Do not use "isBadPacket", it includes "isInvalidProtocol". Since we don't allow < 1.7 and this packet is for older netty-less versions, it will trigger "isInvalidProtocol".
+            // Simply use "isSuspiciousPort" part of "isBadPacket".
+            final boolean sendForgedPong = isSuspiciousPort
+                    || (this.corePlugin.getConfigManager().getConfig().isAllowApiUsage() && !this.corePlugin.getApiManager().isIpCached(ipAddress)) // Force forged pong for IPs that are not yet processed by the API.
+                    || this.corePlugin.getApiManager().isIpCachedBlocked(ipAddress); // Send forged pong if the IP is blocked by the API.
+
+            // Suspicious port.
+            if (sendForgedPong) {
+
+                // Custom logging based off port number.
+                final String reason = isInvalidPort
+                        ? "Invalid port used by client."
+                        : "Suspicious port used by client.";
+
+                // Log the violation, report the IP to CoralGate API, cancel the packet and send forged response.
+                log(packetReceiveEvent, inetSocketAddress, ipAddress, packetTypeCommon, reason, false);
+
+                // This is for older legacy pings.
+                final boolean isOldLegacyPing = ByteBufHelper.readableBytes(packetReceiveEvent.getByteBuf()) == 1;
+
+                final NettyResponder nettyResponder = this.corePlugin.getNettyResponder();
+
+                // Send forged response using NettyResponder.
+                if (isOldLegacyPing) {
+                    nettyResponder.sendOldLegacyPingResponse(packetUser, "A Minecraft Server", 0, 20);
+                } else {
+                    nettyResponder.sendLegacyPingResponse(packetUser, 774, "1.21.11", "A Minecraft Server", 0, 20);
+                }
+
+            }
 
             // Block further logic.
             return;

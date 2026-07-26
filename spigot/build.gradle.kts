@@ -8,7 +8,7 @@ plugins {
 java {
 
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(8))
+        languageVersion = JavaLanguageVersion.of(8)
     }
 
     sourceCompatibility = JavaVersion.VERSION_1_8
@@ -43,7 +43,7 @@ dependencies {
     compileOnly(libs.spigot.api)
 
     // Core implementation.
-    implementation(project(":core"))
+    compileOnly(project(":core"))
 
 }
 
@@ -54,11 +54,19 @@ tasks.processResources {
     inputs.property("coreVersion", libs.versions.coreVersion.get())
     inputs.property("packeteventsVersion", libs.versions.packetevents.get())
 
-    // Replaces placeholders in BOTH yml files.
+    // Replaces placeholders.
     filesMatching(listOf("plugin.yml", "paper-plugin.yml", "platform.properties")) {
         expand(inputs.properties)
     }
 
+}
+
+// A trick so netty used by async-http-client is always
+// relocated, but netty used by injector is always provided by platform (spigot, bungeecord, velocity)
+val coreProvider = provider { project(":core").tasks.shadowJar.flatMap { it.archiveFile } }
+
+tasks.jar {
+    enabled = false // only shadowJar is used
 }
 
 tasks.shadowJar {
@@ -70,11 +78,10 @@ tasks.shadowJar {
     archiveVersion = project.version.toString()
     archiveClassifier = ""
 
+    from(zipTree(coreProvider)) // include shadowed core
+
     // Relocate bStats.
     relocate("org.bstats", "cloud.gteam.coralgate.libs.bstats")
-
-    // Relocate netty.
-    relocate("io.netty", "cloud.gteam.coralgate.libs.netty")
 
     exclude("META-INF/*.SF")
     exclude("META-INF/*.DSA")
