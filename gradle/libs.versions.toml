@@ -1,5 +1,5 @@
 [versions]
-coreVersion = "0.4.3-SNAPSHOT"
+coreVersion = "0.5.0"
 
 packetevents = "2.13.0"
 lamp = "4.0.0-rc.17"
