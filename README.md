@@ -40,7 +40,7 @@ CoralGate supports a wide range of Minecraft server implementations.
 | **Spigot**     |  ⚠️   |       ✅        |        ✅        |   ✅    |  ✅   |     ❓     |
 | **Paper**      |   ✅   |       ✅        |       ⚠️        |   ✅    |  ✅   |     ❓     |
 | **BungeeCord** |   ✅   |       ✅        |        ✅        |   ✅    |  ✅   |     ❓     |
-| **Velocity**   |   ❓   |       ❓        |        ❓        |   ❓    |  ❓   |     ❓     |
+| **Velocity**   |   ✅   |       ✅        |        ✅        |   ✅    |  ✅   |     ❓     |
 | **Sponge**     |   ❌   |       ❌        |        ❌        |   ❌    |  ❌   |     ❌     |
 | **Fabric**     |   ❌   |       ❌        |        ❌        |   ❌    |  ❌   |     ❌     |
 | **Forge**      |   ❌   |       ❌        |        ❌        |   ❌    |  ❌   |     ❌     |
