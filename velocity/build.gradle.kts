@@ -1,14 +1,14 @@
 plugins {
 
     `java-library`
-    id("com.gradleup.shadow") version "9.4.2"
+    alias(libs.plugins.shadow)
 
 }
 
 java {
 
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+        languageVersion = JavaLanguageVersion.of(17)
     }
 
     sourceCompatibility = JavaVersion.VERSION_17
@@ -31,58 +31,53 @@ repositories {
 
 dependencies {
 
-    // Get versions.
-    val lampVersion: String by rootProject.extra
-    val packetEventsVersion: String by rootProject.extra
-    val bstatsVersion: String by rootProject.extra
-
     // Dependencies.
-    implementation("org.bstats:bstats-velocity:$bstatsVersion")
-    implementation("io.github.revxrsal:lamp.common:$lampVersion")
-    implementation("io.github.revxrsal:lamp.velocity:$lampVersion")
-    implementation("io.github.revxrsal:lamp.brigadier:$lampVersion")
+    implementation(libs.bstats.velocity)
+    implementation(libs.lamp.common)
+    implementation(libs.lamp.velocity)
+    implementation(libs.lamp.brigadier)
 
-    compileOnly("com.github.retrooper:packetevents-velocity:$packetEventsVersion")
-    compileOnly("com.velocitypowered:velocity-api:3.4.0")
+    compileOnly(libs.packetevents.velocity)
+    compileOnly(libs.velocity.api)
 
     // Core implementation.
-    implementation(project(":core"))
+    compileOnly(project(":core"))
 
 }
 
 tasks.processResources {
 
     // Get versions.
-    val packetEventsVersion: String by rootProject.extra
-    val coreVersion: String by rootProject.extra
-
-    // Replace plugin.yml
-    filesMatching("velocity-plugin.json") {
-        expand("version" to project.version)
-    }
+    inputs.property("name", project.name)
+    inputs.property("version", project.version)
+    inputs.property("coreVersion", libs.versions.coreVersion.get())
+    inputs.property("packeteventsVersion", libs.versions.packetevents.get())
 
     // Replace properties.
-    filesMatching("platform.properties") {
-
-        expand(
-            "name" to project.name,
-            "version" to project.version,
-            "coreVersion" to coreVersion,
-            "packeteventsVersion" to packetEventsVersion
-        )
-
+    filesMatching(listOf("velocity-plugin.json", "platform.properties")) {
+        expand(inputs.properties)
     }
 
+}
+
+// A trick so netty used by async-http-client is always
+// relocated, but netty used by injector is always provided by platform (spigot, bungeecord, velocity)
+val coreProvider = provider { project(":core").tasks.shadowJar.flatMap { it.archiveFile } }
+
+tasks.jar {
+    enabled = false // only shadowJar is used
 }
 
 tasks.shadowJar {
 
     // Wait for the core shadowJar to finish.
-    mustRunAfter(project(":core").tasks.named("shadowJar"))
+    dependsOn(":core:shadowJar")
 
-    archiveBaseName.set("CoralGate-Velocity")
-    archiveVersion.set(project.version.toString())
-    archiveClassifier.set("")
+    archiveBaseName = "CoralGate-Velocity"
+    archiveVersion = project.version.toString()
+    archiveClassifier = ""
+
+    from(zipTree(coreProvider)) // include shadowed core
 
     // Relocate bStats.
     relocate("org.bstats", "cloud.gteam.coralgate.libs.bstats")
@@ -90,6 +85,10 @@ tasks.shadowJar {
     exclude("META-INF/*.SF")
     exclude("META-INF/*.DSA")
     exclude("META-INF/*.RSA")
+
+    filesMatching("META-INF/*.kotlin_module") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
 
 }
 

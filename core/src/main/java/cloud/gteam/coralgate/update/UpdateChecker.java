@@ -26,9 +26,7 @@ import org.asynchttpclient.Dsl;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class UpdateChecker {
 
@@ -49,15 +47,19 @@ public class UpdateChecker {
                 .build());
     }
 
-    public CompletableFuture<Boolean> isUpToDate() {
+    private CompletableFuture<Boolean> isUpToDate() {
 
         final String currentVersion = this.corePlugin.getPlatformProperties().getProperty("platform-version");
 
         // This is a dev/preview build, assume it's "up to date" to not show an out of date console message.
-        if (currentVersion.endsWith("-SNAPSHOT")) return CompletableFuture.completedFuture(true);
+        if (currentVersion.endsWith("-SNAPSHOT")) {
+            return CompletableFuture.completedFuture(true);
+        }
 
         // Use cache.
-        if (this.updateCheckFuture != null) return this.updateCheckFuture;
+        if (this.updateCheckFuture != null) {
+            return this.updateCheckFuture;
+        }
 
         this.updateCheckFuture = this.httpClient.prepareGet("https://api.github.com/repos/GTeamX/CoralGate/releases/latest")
                 .setHeader("User-Agent", "CoralGate-UpdateChecker/" + currentVersion)
@@ -98,6 +100,22 @@ public class UpdateChecker {
 
     }
 
+    public void checkForUpdates() {
+
+        CorePlugin.getLogger().info("Checking for updates, please wait...");
+
+        isUpToDate().thenAccept(upToDate -> {
+
+            if (upToDate) {
+                CorePlugin.getLogger().info("CoralGate is up to date!");
+            } else {
+                CorePlugin.getLogger().warning("You are behind updates on CoralGate! Latest version is '" + getLatestVersion() + "'. You are on '" + this.corePlugin.getPlatformProperties().getProperty("platform-version") + "'.");
+            }
+
+        });
+
+    }
+
     public void shutdown() {
 
         // Forcefully cancel any HTTP callbacks still hanging around.
@@ -106,7 +124,11 @@ public class UpdateChecker {
         }
 
         try {
-            if (!this.httpClient.isClosed()) this.httpClient.close();
+
+            if (!this.httpClient.isClosed()) {
+                this.httpClient.close();
+            }
+
         } catch (final IOException e) {
             CorePlugin.getLogger().severe("Error closing UpdateChecker client: " + e.getMessage());
         }

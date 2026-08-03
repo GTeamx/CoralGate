@@ -33,7 +33,7 @@ public class CacheEntry {
     }
 
     public boolean isExpired(final long duration) {
-        return (System.currentTimeMillis() - timestamp) > duration;
+        return (System.currentTimeMillis() - this.timestamp) > duration;
     }
 
 }

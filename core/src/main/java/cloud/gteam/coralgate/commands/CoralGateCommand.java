@@ -28,6 +28,8 @@ import revxrsal.commands.annotation.Description;
 import revxrsal.commands.annotation.Subcommand;
 import revxrsal.commands.command.CommandActor;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 @Command({"coralgate", "cg"})
@@ -48,21 +50,37 @@ public class CoralGateCommand {
         final ConfigManager configManager = this.corePlugin.getConfigManager();
         final ConfigModel config = configManager.getConfig();
 
-        actor.sendRawMessage("§7-----------------------------------------------------");
-        actor.sendRawMessage("");
-        actor.sendRawMessage(config.getNormalPrefix() + "§f" + this.corePlugin.getPlatformProperties().getProperty("platform-version") + " | §7§o(" + this.corePlugin.getPlatformProperties().getProperty("core-version") + ")§r");
-        actor.sendRawMessage("§7Made by XIII___ and Vagdedes2 with(out) love!");
-        actor.sendRawMessage("");
-        actor.sendRawMessage("§7Available commands:");
-        actor.sendRawMessage("");
-        actor.sendRawMessage(" - /coralgate§8|cg§r help §7- Show this menu.");
-        actor.sendRawMessage(" - /coralgate§8|cg§r version§8|ver§r §7- Show versions.");
-        actor.sendRawMessage(" - /coralgate§8|cg§r config§8|cfg§r reload§8|rl§r §7- Reload the config.");
-        actor.sendRawMessage("");
-        actor.sendRawMessage("§bHaving troubles ? Need help ? Found a bug ?");
-        actor.sendRawMessage("§7Join our Discord: §bhttps://discord.gteam.cloud");
-        actor.sendRawMessage("");
-        actor.sendRawMessage("§7-----------------------------------------------------");
+        final String[] lines = {
+                "§7-----------------------------------------------------",
+                "",
+                config.getNormalPrefix() + "§f" + this.corePlugin.getPlatformProperties().getProperty("platform-version") + " | §7§o(" + this.corePlugin.getPlatformProperties().getProperty("core-version") + ")§r",
+                "§7Made by XIII___ and Vagdedes2 with(out) love!",
+                "",
+                "§7Available commands:",
+                "",
+                " - /coralgate§8|cg§r help §7- Show this menu.",
+                " - /coralgate§8|cg§r version§8|ver§r §7- Show versions.",
+                "",
+                "§bHaving troubles ? Need help ? Found a bug ?",
+                "§7Join our Discord: §bhttps://discord.gteam.cloud",
+                "",
+                "§7-----------------------------------------------------"
+        };
+
+        for (String line : lines) {
+
+            // Velocity only sees colors via "&" and not "§".
+            // However, other platforms only see colors via "§", so we'll have to handle this specifically for Velocity.
+            if (this.corePlugin.getPlatformProperties().getProperty("platform-name").equals("velocity")) {
+                line = line.replace("§", "&");
+            } else {
+                // Fool-proof in case somebody put "&" in their config for prefixes.
+                line = line.replace("&", "§");
+            }
+
+            actor.reply(line);
+
+        }
 
     }
 
@@ -77,52 +95,51 @@ public class CoralGateCommand {
 
         final String currentVersion = this.corePlugin.getPlatformProperties().getProperty("core-version") + "_" + this.corePlugin.getPlatformProperties().getProperty("platform-version");
 
-        actor.sendRawMessage("§7-----------------------------------------------------");
-        actor.sendRawMessage("");
-        actor.sendRawMessage(config.getNormalPrefix() + "§fVersions information");
-        actor.sendRawMessage("");
-        actor.sendRawMessage("§7Platform: §f" + this.corePlugin.getPlatformProperties().getProperty("platform-name"));
-        actor.sendRawMessage("§7Version: " + (Objects.equals(this.corePlugin.getUpdateChecker().getLatestVersion(), currentVersion) ? "§a" : "§e") + this.corePlugin.getPlatformProperties().getProperty("platform-version"));
-        actor.sendRawMessage("");
-        actor.sendRawMessage("§7Core version: " + (Objects.equals(this.corePlugin.getUpdateChecker().getLatestVersion(), currentVersion) ? "§a" : "§e") + this.corePlugin.getPlatformProperties().getProperty("core-version"));
-        actor.sendRawMessage("");
-        actor.sendRawMessage("§7Configuration version: §f" + (Objects.equals(this.corePlugin.getConfigManager().getLatestConfigVersion(), config.getConfigVersion()) ? "§a" : "§e") + config.getConfigVersion());
-        actor.sendRawMessage("");
+        final String versionColor = Objects.equals(this.corePlugin.getUpdateChecker().getLatestVersion(), currentVersion) ? "§a" : "§e";
+        final String configColor = Objects.equals(this.corePlugin.getConfigManager().getLatestConfigVersion(), config.getConfigVersion()) ? "§a" : "§e";
+        final String packeteventsColor = PacketEvents.getAPI().getVersion().toString().equals(this.corePlugin.getPlatformProperties().getProperty("packetevents-version")) ? "§a" : "§e";
+
+        // Create an array list so we can freely handle conditional statements with {} blocks
+        final List<String> lines = new ArrayList<>();
+
+        lines.add("§7-----------------------------------------------------");
+        lines.add("");
+        lines.add(config.getNormalPrefix() + "§fVersions information");
+        lines.add("");
+        lines.add("§7Platform: §f" + this.corePlugin.getPlatformProperties().getProperty("platform-name"));
+        lines.add("§7Version: " + versionColor + this.corePlugin.getPlatformProperties().getProperty("platform-version"));
+        lines.add("");
+        lines.add("§7Core version: " + versionColor + this.corePlugin.getPlatformProperties().getProperty("core-version"));
+        lines.add("");
+        lines.add("§7Configuration version: §f" + configColor + config.getConfigVersion());
+        lines.add("");
+
         if (config.isAllowApiUsage()) {
-            actor.sendRawMessage("§7API host: §f" + config.getApiHost());
-            actor.sendRawMessage("§7API version: §f" + config.getApiVersion());
+            lines.add("§7API host: §f" + config.getApiHost());
+            lines.add("§7API version: §f" + config.getApiVersion());
         } else {
-            actor.sendRawMessage("§7API usage is disabled.");
+            lines.add("§7API usage is disabled.");
         }
-        actor.sendRawMessage("");
-        actor.sendRawMessage("§7packetevents version: " + (PacketEvents.getAPI().getVersion().toString().equals(this.corePlugin.getPlatformProperties().getProperty("packetevents-version")) ? "§a" : "§e") + this.corePlugin.getPlatformProperties().getProperty("packetevents-version"));
-        actor.sendRawMessage("");
-        actor.sendRawMessage("§7-----------------------------------------------------");
 
-    }
+        lines.add("");
+        lines.add("§7packetevents version: " + packeteventsColor + this.corePlugin.getPlatformProperties().getProperty("packetevents-version"));
+        lines.add("");
+        lines.add("§7-----------------------------------------------------");
 
-    // /coralgate|cg config|cfg reload|rl.
-    @Subcommand({"config reload", "config rl", "cfg reload", "cfg rl"})
-    @Description("Reload the configuration file of CoralGate.")
-    @CommandPermission("coralgate.commands.config.reload")
-    public void configReload(final CommandActor actor) {
+        for (String line : lines) {
 
-        final ConfigManager configManager = this.corePlugin.getConfigManager();
-        ConfigModel config = configManager.getConfig();
+            // Velocity only sees colors via "&" and not "§".
+            // However, other platforms only see colors via "§", so we'll have to handle this specifically for Velocity.
+            if (this.corePlugin.getPlatformProperties().getProperty("platform-name").equals("velocity")) {
+                line = line.replace("§", "&");
+            } else {
+                // Fool-proof in case somebody put "&" in their config for prefixes.
+                line = line.replace("&", "§");
+            }
 
-        actor.sendRawMessage(config.getNormalPrefix() + "Reloading configuration file...");
+            actor.reply(line);
 
-        // Get latest config version.
-        final String latestConfigVersion = this.corePlugin.getConfigManager().getLatestConfigVersion();
-
-        configManager.load();
-        // Update config with latest load.
-        config = configManager.getConfig();
-
-        // Compare current config version and latest version and alert the user if necessary.
-        if (!Objects.equals(latestConfigVersion, config.getConfigVersion())) actor.sendRawMessage(config.getWarningPrefix() + "Please consider upgrading your configuration file to the latest version: '" + latestConfigVersion + "'. Your configuration file is at version '" + config.getConfigVersion() + "'.");
-
-        actor.sendRawMessage(config.getNormalPrefix() + "Configuration file reloaded!");
+        }
 
     }
 

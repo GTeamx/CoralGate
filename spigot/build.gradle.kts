@@ -1,14 +1,14 @@
 plugins {
 
     `java-library`
-    id("com.gradleup.shadow") version "9.4.2"
+    alias(libs.plugins.shadow)
 
 }
 
 java {
 
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(8))
+        languageVersion = JavaLanguageVersion.of(8)
     }
 
     sourceCompatibility = JavaVersion.VERSION_1_8
@@ -34,72 +34,63 @@ repositories {
 
 dependencies {
 
-    // Get versions.
-    val lampVersion: String by rootProject.extra
-    val packetEventsVersion: String by rootProject.extra
-    val bstatsVersion: String by rootProject.extra
-
     // Dependencies.
-    implementation("org.bstats:bstats-bukkit:$bstatsVersion")
-    implementation("io.github.revxrsal:lamp.common:$lampVersion")
-    implementation("io.github.revxrsal:lamp.bukkit:$lampVersion")
+    implementation(libs.bstats.bukkit)
+    implementation(libs.lamp.common)
+    implementation(libs.lamp.bukkit)
 
-    compileOnly("com.github.retrooper:packetevents-spigot:$packetEventsVersion")
-    compileOnly("org.spigotmc:spigot-api:1.8-R0.1-SNAPSHOT")
+    compileOnly(libs.packetevents.spigot)
+    compileOnly(libs.spigot.api)
 
     // Core implementation.
-    implementation(project(":core"))
+    compileOnly(project(":core"))
 
 }
 
 tasks.processResources {
 
-    // Get versions.
-    val packetEventsVersion: String by rootProject.extra
-    val coreVersion: String by rootProject.extra
+    inputs.property("name", project.name)
+    inputs.property("version", project.version)
+    inputs.property("coreVersion", libs.versions.coreVersion.get())
+    inputs.property("packeteventsVersion", libs.versions.packetevents.get())
 
-    // Replace plugin.yml
-    filesMatching("plugin.yml") {
-        expand("version" to project.version)
+    // Replaces placeholders.
+    filesMatching(listOf("plugin.yml", "paper-plugin.yml", "platform.properties")) {
+        expand(inputs.properties)
     }
 
-    // Replace properties.
-    filesMatching("platform.properties") {
+}
 
-        expand(
-            "name" to project.name,
-            "version" to project.version,
-            "coreVersion" to coreVersion,
-            "packeteventsVersion" to packetEventsVersion
-        )
+// A trick so netty used by async-http-client is always
+// relocated, but netty used by injector is always provided by platform (spigot, bungeecord, velocity)
+val coreProvider = provider { project(":core").tasks.shadowJar.flatMap { it.archiveFile } }
 
-    }
-
+tasks.jar {
+    enabled = false // only shadowJar is used
 }
 
 tasks.shadowJar {
 
     // Wait for the core shadowJar to finish.
-    dependsOn(project(":core").tasks.named("shadowJar"))
+    dependsOn(":core:shadowJar")
 
-    archiveBaseName.set("CoralGate-Spigot")
-    archiveVersion.set(project.version.toString())
-    archiveClassifier.set("")
+    archiveBaseName = "CoralGate-Spigot"
+    archiveVersion = project.version.toString()
+    archiveClassifier = ""
+
+    from(zipTree(coreProvider)) // include shadowed core
 
     // Relocate bStats.
     relocate("org.bstats", "cloud.gteam.coralgate.libs.bstats")
-
-    // Relocate netty.
-    relocate("io.netty", "cloud.gteam.coralgate.libs.netty")
 
     exclude("META-INF/*.SF")
     exclude("META-INF/*.DSA")
     exclude("META-INF/*.RSA")
 
-}
+    filesMatching("META-INF/*.kotlin_module") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
 
-tasks.compileJava {
-    dependsOn(project(":core").tasks.named("jar"))
 }
 
 tasks.build {

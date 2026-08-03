@@ -31,7 +31,7 @@ import java.io.InputStream;
 
 public class ConfigManager {
 
-    private final String latestConfigVersion = "0.2.1";
+    private final String latestConfigVersion = "0.2.3";
 
     private final String configFileName;
     private final File configFile;
@@ -51,8 +51,10 @@ public class ConfigManager {
             final InputStream defaultStream = getClass().getClassLoader().getResourceAsStream(this.configFileName);
 
             if (defaultStream == null) {
+
                 CorePlugin.getLogger().severe("Could not find default resource file: " + this.configFileName);
                 return;
+
             }
 
             this.config = new ConfigModel();
@@ -81,7 +83,7 @@ public class ConfigManager {
 
         if (this.document == null) return;
 
-        this.config.setConfigVersion(this.document.getString("version", "0.2.1"));
+        this.config.setConfigVersion(this.document.getString("version", this.latestConfigVersion));
 
         this.config.setNormalPrefix(this.document.getString("prefixes.normal", "§b§lCoralGate §7» §r"));
         this.config.setWarningPrefix(this.document.getString("prefixes.warning", "§6§lCoralGate §7» §r"));
@@ -107,7 +109,9 @@ public class ConfigManager {
                 if (!this.configFile.getParentFile().mkdirs()) CorePlugin.getLogger().severe("Couldn't create data folders. Is the directory read-only? No error to display.");
             }
 
-            if (this.document != null) this.document.save();
+            if (this.document != null) {
+                this.document.save();
+            }
 
         } catch (final IOException e) {
             CorePlugin.getLogger().severe("Couldn't write data to " + this.configFileName + ". Is the directory read-only? See error:" + e.getMessage());

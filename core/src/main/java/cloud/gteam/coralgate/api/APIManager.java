@@ -73,36 +73,57 @@ public class APIManager {
 
         // Cache not available, fetch from API.
         return fetchFromApi(ipAddress).thenApply(result -> {
-            if (this.corePlugin.getConfigManager().getConfig().isAllowApiUsage()) this.ipCache.put(ipAddress, new CacheEntry(result));
+
+            if (this.corePlugin.getConfigManager().getConfig().isAllowApiUsage()) {
+                this.ipCache.put(ipAddress, new CacheEntry(result));
+            }
+
             return result;
+
         });
 
     }
 
-    public boolean isIpBlockedCache(final String ipAddress) {
+    public boolean isIpCached(final String ipAddress) {
         final CacheEntry entry = this.ipCache.get(ipAddress);
-        return entry != null && !entry.isExpired(this.cacheTime) && !entry.isBlocked();
+        return entry != null && !entry.isExpired(this.cacheTime);
     }
 
-    public void reportIp(final String ipAddress) {
-        fetchFromApi(ipAddress);
+    public boolean isIpCachedBlocked(final String ipAddress) {
+        return isIpCached(ipAddress) && this.ipCache.get(ipAddress).isBlocked();
+    }
+
+    public void checkIp(final String ipAddress) {
+        fetchFromApi(ipAddress).thenApply(result -> {
+
+            if (this.corePlugin.getConfigManager().getConfig().isAllowApiUsage()) {
+                this.ipCache.put(ipAddress, new CacheEntry(result));
+            }
+
+            return null;
+
+        });
     }
 
     private CompletableFuture<Boolean> fetchFromApi(final String ipAddress) {
 
-        if (!this.corePlugin.getConfigManager().getConfig().isAllowApiUsage()) return CompletableFuture.completedFuture(false);
+        if (!this.corePlugin.getConfigManager().getConfig().isAllowApiUsage()) {
+            return CompletableFuture.completedFuture(false); // Not blocked.
+        }
 
         try {
 
             final InetAddress inetAddress = InetAddress.getByName(ipAddress);
-
-            if (inetAddress.isSiteLocalAddress() || inetAddress.isLoopbackAddress() || inetAddress.isLinkLocalAddress()) return CompletableFuture.completedFuture(false);
+            if (inetAddress.isSiteLocalAddress() || inetAddress.isLoopbackAddress() || inetAddress.isLinkLocalAddress()) {
+                return CompletableFuture.completedFuture(false); // Not blocked.
+            }
 
         } catch (final UnknownHostException e) {
 
             CorePlugin.getLogger().severe("Couldn't parse IP address. Is the API properly configured? See error: " + e.getMessage());
             this.healthStatus = false;
 
+            // Not blocked.
             return CompletableFuture.completedFuture(false);
 
         }
@@ -115,12 +136,12 @@ public class APIManager {
                 .exceptionally(e -> {
                     CorePlugin.getLogger().severe("Couldn't reach API. Is it down? See error: " + e.getMessage());
                     this.healthStatus = false;
-                    return false;
+                    return false; // Not blocked.
                 });
 
         // Keep track of requests to cleanly clear them on shutdown.
         this.pendingFutures.add(future);
-        future.whenComplete((res, ex) -> this.pendingFutures.remove(future));
+        future.whenComplete((res, exception) -> this.pendingFutures.remove(future));
 
         return future;
 
@@ -139,9 +160,12 @@ public class APIManager {
             final JsonElement field = json.get(expectedField);
 
             if (field == null) {
+
                 CorePlugin.getLogger().severe("Couldn't find field '" + expectedField + "' in API's JSON response. Did the API change? No error to display.");
                 this.healthStatus = false;
-                return false;
+
+                return false; // Not blocked.
+
             }
 
             // Compare values.
@@ -153,14 +177,14 @@ public class APIManager {
 
             this.healthStatus = true;
 
-            return Objects.equals(actualValue, expectedValue);
+            return Objects.equals(actualValue, expectedValue); // Blocked.
 
         } catch (final Exception e) {
 
             CorePlugin.getLogger().severe("Couldn't parse '" + expectedField + "' status from API. Did the API change? See error: " + e.getMessage());
             this.healthStatus = false;
 
-            return false;
+            return false; // Not blocked.
 
         }
 
@@ -184,7 +208,9 @@ public class APIManager {
                         // Extract the "health" field.
                         final JsonElement healthField = json.get("health");
 
-                        if (healthField == null) return false;
+                        if (healthField == null) {
+                            return false;
+                        }
 
                         // Clean the value and compare to "OK".
                         this.healthStatus = "OK".equalsIgnoreCase(healthField.toJson(false, false).replace("\"", ""));
@@ -211,13 +237,21 @@ public class APIManager {
 
         // Forcefully cancel any HTTP callbacks still hanging around.
         for (final CompletableFuture<?> forFuture : this.pendingFutures) {
-            if (!forFuture.isDone()) forFuture.cancel(true);
+
+            if (!forFuture.isDone()) {
+                forFuture.cancel(true);
+            }
+
         }
 
         this.pendingFutures.clear();
 
         try {
-            if (!this.httpClient.isClosed()) this.httpClient.close();
+
+            if (!this.httpClient.isClosed()) {
+                this.httpClient.close();
+            }
+
         } catch (final IOException e) {
             CorePlugin.getLogger().severe("Couldn't close AsyncHttpClient. See error: " + e.getMessage());
         }

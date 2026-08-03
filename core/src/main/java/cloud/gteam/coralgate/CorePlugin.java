@@ -20,6 +20,7 @@ package cloud.gteam.coralgate;
 
 import cloud.gteam.coralgate.api.APIManager;
 import cloud.gteam.coralgate.config.ConfigManager;
+import cloud.gteam.coralgate.injector.NettyResponder;
 import cloud.gteam.coralgate.update.UpdateChecker;
 import cloud.gteam.coralgate.utils.ConfigUtils;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -27,6 +28,7 @@ import com.github.retrooper.packetevents.PacketEvents;
 import java.io.File;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 public final class CorePlugin {
@@ -40,11 +42,13 @@ public final class CorePlugin {
 
     private Properties platformProperties;
 
+    private NettyResponder nettyResponder;
+
     private ConfigManager configManager;
     private APIManager apiManager;
     private UpdateChecker updateChecker;
 
-    public void onEnable(final Logger logger, final File dataFolder, final boolean onlineMode, final String configFileName, final Properties platformProperties) {
+    public void onEnable(final Logger logger, final File dataFolder, final boolean onlineMode, final String configFileName, final Properties platformProperties, final NettyResponder nettyResponder) {
 
         CorePlugin.logger = logger;
 
@@ -54,13 +58,17 @@ public final class CorePlugin {
 
         logger.info("Loading platform '" + platformProperties.getProperty("platform-name") + "' version '" + platformProperties.getProperty("platform-version") + "', implemented against core version '" + platformProperties.getProperty("core-version") + "'...");
 
+        this.nettyResponder = nettyResponder;
+
         final String peCoreVersion = platformProperties.getProperty("packetevents-version");
         final String peServerVersion = PacketEvents.getAPI().getVersion().toString();
 
         // packetevents versions do not match.
         if (!peCoreVersion.equals(peServerVersion)) {
             logger.warning("packetevents version mismatch! You are using version '" + peServerVersion + "' but core module uses '" + peCoreVersion + "'! You may experience issues or bugs. Update CoralGate and packetevents to fix this issue.");
-        } else logger.info("Using packetevents version '" + peCoreVersion + "'...");
+        } else {
+            logger.info("Using packetevents version '" + peCoreVersion + "'...");
+        }
 
         this.testMode = new File(dataFolder, "test.mode").exists();
 
@@ -71,7 +79,9 @@ public final class CorePlugin {
         final String latestConfigVersion = this.configManager.getLatestConfigVersion();
 
         // Compare to internal configuration version to see if it's outdated.
-        if (!Objects.equals(latestConfigVersion, this.configManager.getConfig().getConfigVersion())) logger.warning("Please consider upgrading your configuration file to the latest version: '" + latestConfigVersion + "'.");
+        if (!Objects.equals(latestConfigVersion, this.configManager.getConfig().getConfigVersion())) {
+            logger.warning("Please consider upgrading your configuration file to the latest version: '" + latestConfigVersion + "'.");
+        }
 
         logger.info("Using configuration file version '" + this.configManager.getConfig().getConfigVersion() + "'.");
 
@@ -93,9 +103,15 @@ public final class CorePlugin {
 
                 });
 
-            } else logger.info("API health check skipped.");
+            } else {
+                logger.info("API health check skipped.");
+            }
 
-        } else logger.info("API loading skipped (disabled by config).");
+        } else {
+            logger.info("API loading skipped (disabled by config).");
+        }
+
+        logger.info("Reading online-mode and compression threshold...");
 
         this.onlineMode = onlineMode;
 
@@ -105,19 +121,7 @@ public final class CorePlugin {
 
         this.updateChecker = new UpdateChecker(this);
 
-        this.updateChecker.isUpToDate().thenAccept(upToDate -> {
-
-            try {
-                Thread.sleep(3000);
-            } catch (final InterruptedException ignored) {}
-
-            if (upToDate) {
-                CorePlugin.getLogger().info("CoralGate is up to date!");
-            } else {
-                CorePlugin.getLogger().warning("You are behind updates on CoralGate! Latest version is '" + this.updateChecker.getLatestVersion() + "'. You are on '" + this.platformProperties.getProperty("platform-version") + "'.");
-            }
-
-        });
+        Executors.newSingleThreadScheduledExecutor().schedule(() -> this.updateChecker.checkForUpdates(), 3, java.util.concurrent.TimeUnit.SECONDS);
 
         logger.info("CoralGate is ready to use!");
 
@@ -125,8 +129,13 @@ public final class CorePlugin {
 
     public void onDisable() {
 
-        if (this.apiManager != null) this.apiManager.shutdown();
-        if (this.updateChecker != null) this.updateChecker.shutdown();
+        if (this.apiManager != null) {
+            this.apiManager.shutdown();
+        }
+
+        if (this.updateChecker != null) {
+            this.updateChecker.shutdown();
+        }
 
     }
 
@@ -148,6 +157,10 @@ public final class CorePlugin {
 
     public Properties getPlatformProperties() {
         return this.platformProperties;
+    }
+
+    public NettyResponder getNettyResponder() {
+        return this.nettyResponder;
     }
 
     public ConfigManager getConfigManager() {

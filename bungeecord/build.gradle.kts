@@ -1,14 +1,14 @@
 plugins {
 
     `java-library`
-    id("com.gradleup.shadow") version "9.4.2"
+    alias(libs.plugins.shadow)
 
 }
 
 java {
 
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(8))
+        languageVersion = JavaLanguageVersion.of(8)
     }
 
     sourceCompatibility = JavaVersion.VERSION_1_8
@@ -31,57 +31,50 @@ repositories {
 
 dependencies {
 
-    // Get versions.
-    val lampVersion: String by rootProject.extra
-    val packetEventsVersion: String by rootProject.extra
-    val bstatsVersion: String by rootProject.extra
-
     // Dependencies.
-    implementation("org.bstats:bstats-bungeecord:$bstatsVersion")
-    implementation("io.github.revxrsal:lamp.common:$lampVersion")
-    implementation("io.github.revxrsal:lamp.bungee:$lampVersion")
+    implementation(libs.bstats.bungeecord)
+    implementation(libs.lamp.common)
+    implementation(libs.lamp.bungee)
 
-    compileOnly("com.github.retrooper:packetevents-bungeecord:$packetEventsVersion")
-    compileOnly("net.md-5:bungeecord-api:1.16-R0.4")
+    compileOnly(libs.packetevents.bungeecord)
+    compileOnly(libs.bungeecord.api)
 
     // Core implementation.
-    implementation(project(path = ":core", configuration = "shadow"))
+    compileOnly(project(":core"))
 
 }
 
 tasks.processResources {
 
-    // Get versions.
-    val packetEventsVersion: String by rootProject.extra
-    val coreVersion: String by rootProject.extra
-
-    // Replace bungee.yml
-    filesMatching("bungee.yml") {
-        expand("version" to project.version)
-    }
+    inputs.property("name", project.name)
+    inputs.property("version", project.version)
+    inputs.property("coreVersion", libs.versions.coreVersion.get())
+    inputs.property("packeteventsVersion", libs.versions.packetevents.get())
 
     // Replace properties.
-    filesMatching("platform.properties") {
-
-        expand(
-            "name" to project.name,
-            "version" to project.version,
-            "coreVersion" to coreVersion,
-            "packeteventsVersion" to packetEventsVersion
-        )
-
+    filesMatching(listOf("bungee.yml", "platform.properties")) {
+        expand(inputs.properties)
     }
+}
 
+// A trick so netty used by async-http-client is always
+// relocated, but netty used by injector is always provided by platform (spigot, bungeecord, velocity)
+val coreProvider = provider { project(":core").tasks.shadowJar.flatMap { it.archiveFile } }
+
+tasks.jar {
+    enabled = false // only shadowJar is used
 }
 
 tasks.shadowJar {
 
     // Wait for the core shadowJar to finish.
-    dependsOn(project(":core").tasks.named("shadowJar"))
+    dependsOn(":core:shadowJar")
 
-    archiveBaseName.set("CoralGate-Bungeecord")
-    archiveVersion.set(project.version.toString())
-    archiveClassifier.set("")
+    archiveBaseName = "CoralGate-Bungeecord"
+    archiveVersion = project.version.toString()
+    archiveClassifier = ""
+
+    from(zipTree(coreProvider)) // include shadowed core
 
     // Relocate bStats.
     relocate("org.bstats", "cloud.gteam.coralgate.libs.bstats")
@@ -89,6 +82,10 @@ tasks.shadowJar {
     exclude("META-INF/*.SF")
     exclude("META-INF/*.DSA")
     exclude("META-INF/*.RSA")
+
+    filesMatching("META-INF/*.kotlin_module") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
 
 }
 

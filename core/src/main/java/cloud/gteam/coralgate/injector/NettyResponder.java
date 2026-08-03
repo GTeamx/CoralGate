@@ -16,17 +16,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package cloud.gteam.coralgate.commands;
+package cloud.gteam.coralgate.injector;
 
-import cloud.gteam.coralgate.commands.permissions.PermissionChecker;
-import revxrsal.commands.bukkit.actor.BukkitCommandActor;
-import revxrsal.commands.command.CommandActor;
+import com.github.retrooper.packetevents.protocol.player.User;
 
-public class PaperPermissionChecker implements PermissionChecker {
+public interface NettyResponder {
 
-    @Override
-    public boolean hasPermission(final CommandActor actor, final String permission) {
-        return ((BukkitCommandActor) actor).sender().hasPermission(permission);
-    }
+    // 1.4+ format: "§1\0protocol\0version\0motd\0online\0max".
+    void sendLegacyPingResponse(final User user, final int protocolVersion, final String serverVersion, final String motd, final int onlinePlayers, final int maxPlayers);
+
+    // Pre-1.4 (<=1.3) format: "motd§online§max", no §1 prefix, no protocol/version fields.
+    void sendOldLegacyPingResponse(final User user, final String motd, final int onlinePlayers, final int maxPlayers);
 
 }

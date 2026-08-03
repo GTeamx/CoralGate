@@ -21,6 +21,8 @@ package cloud.gteam.coralgate;
 import cloud.gteam.coralgate.commands.CoralGateCommand;
 import cloud.gteam.coralgate.commands.SpigotPermissionChecker;
 import cloud.gteam.coralgate.commands.permissions.PermissionFactory;
+import cloud.gteam.coralgate.injector.SpigotInjector;
+import cloud.gteam.coralgate.injector.handlers.SpigotNettyResponder;
 import cloud.gteam.coralgate.processor.NetworkProcessor;
 import cloud.gteam.coralgate.utils.PlatformUtils;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -32,24 +34,50 @@ import revxrsal.commands.Lamp;
 import revxrsal.commands.bukkit.BukkitLamp;
 import revxrsal.commands.bukkit.actor.BukkitCommandActor;
 
+import java.util.Properties;
+
 public final class SpigotPlugin extends JavaPlugin {
 
     private final CorePlugin corePlugin = new CorePlugin();
 
+    private final SpigotInjector injector = new SpigotInjector();
+
     @Override
     public void onLoad() {
-        PacketEvents.getAPI().getEventManager().registerListener(
-                new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
+
+        if (!this.injector.isServerBound()) {
+            this.injector.inject();
+        }
+
+        PacketEvents.getAPI().getEventManager().registerListener(new NetworkProcessor(getCorePlugin()), PacketListenerPriority.HIGHEST);
+
     }
 
     @Override
     public void onEnable() {
 
+        // Inject for LEGACY_SERVER_LIST_PING.
+        if (!this.injector.hasInjected) {
+            this.injector.inject();
+        }
+
         // Start bStats.
         new Metrics(this, 29439);
 
+        // Get properties early to modify the platform name later on if needed.
+        final Properties platformProperties = PlatformUtils.loadProperties(this.getClass());
+
+        // Paper's bootstrapper context class is only present when loaded via paper-plugin.yml
+        // If it exists we're running as 'paper'.
+        try {
+
+            Class.forName("io.papermc.paper.plugin.bootstrap.BootstrapContext");
+            platformProperties.setProperty("platform-name", "paper");
+
+        } catch (final ClassNotFoundException ignored) {}
+
         // Load core.
-        this.corePlugin.onEnable(this.getLogger(), getDataFolder(), Bukkit.getOnlineMode(), "server.properties", PlatformUtils.loadProperties(this.getClass()));
+        this.corePlugin.onEnable(this.getLogger(), getDataFolder(), Bukkit.getOnlineMode(), "server.properties", platformProperties, new SpigotNettyResponder());
 
         // Load commands.
         final Lamp<BukkitCommandActor> bukkitCommandActor = BukkitLamp.builder(this)
@@ -61,6 +89,8 @@ public final class SpigotPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+
+        this.injector.uninject();
 
         this.corePlugin.onDisable();
 

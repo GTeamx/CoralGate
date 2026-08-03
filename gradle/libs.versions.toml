@@ -1,0 +1,51 @@
+[versions]
+coreVersion = "0.5.0"
+
+packetevents = "2.13.0"
+lamp = "4.0.0-rc.17"
+bstats = "3.2.1"
+
+jankson = "1.2.3"
+async-http-client = "2.16.0"
+jetbrains-annotations = "26.1.0"
+boosted-yaml = "1.3.7"
+gson = "2.14.0"
+adventure-api = "4.26.1"
+
+spigot = "1.8.8-R0.1-SNAPSHOT"
+bungeecord = "1.16-R0.4"
+velocity = "3.4.0"
+
+shadow = "9.6.1"
+
+[libraries]
+
+jankson = { module = "blue.endless:jankson", version.ref = "jankson" }
+async-http-client = { module = "org.asynchttpclient:async-http-client", version.ref = "async-http-client" }
+jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrains-annotations" }
+boosted-yaml = { module = "dev.dejvokep:boosted-yaml", version.ref = "boosted-yaml" }
+
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+adventure-api = { module = "net.kyori:adventure-api", version.ref = "adventure-api" }
+
+bstats-bukkit = { module = "org.bstats:bstats-bukkit", version.ref = "bstats" }
+bstats-bungeecord = { module = "org.bstats:bstats-bungeecord", version.ref = "bstats" }
+bstats-velocity = { module = "org.bstats:bstats-velocity", version.ref = "bstats" }
+
+lamp-common = { module = "io.github.revxrsal:lamp.common", version.ref = "lamp" }
+lamp-bukkit = { module = "io.github.revxrsal:lamp.bukkit", version.ref = "lamp" }
+lamp-bungee = { module = "io.github.revxrsal:lamp.bungee", version.ref = "lamp" }
+lamp-velocity = { module = "io.github.revxrsal:lamp.velocity", version.ref = "lamp" }
+lamp-brigadier = { module = "io.github.revxrsal:lamp.brigadier", version.ref = "lamp" }
+
+packetevents-api = { module = "com.github.retrooper:packetevents-api", version.ref = "packetevents" }
+packetevents-spigot = { module = "com.github.retrooper:packetevents-spigot", version.ref = "packetevents" }
+packetevents-bungeecord = { module = "com.github.retrooper:packetevents-bungeecord", version.ref = "packetevents" }
+packetevents-velocity = { module = "com.github.retrooper:packetevents-velocity", version.ref = "packetevents" }
+
+spigot-api = { module = "org.spigotmc:spigot-api", version.ref = "spigot" }
+bungeecord-api = { module = "net.md-5:bungeecord-api", version.ref = "bungeecord" }
+velocity-api = { module = "com.velocitypowered:velocity-api", version.ref = "velocity" }
+
+[plugins]
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
