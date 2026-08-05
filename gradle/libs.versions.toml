@@ -2,7 +2,7 @@
 coreVersion = "0.5.1-SNAPSHOT"
 
 packetevents = "2.13.0"
-lamp = "4.0.0-rc.17"
+lamp = "4.0.0-rc.18"
 bstats = "3.2.1"
 
 jankson = "1.2.3"
