@@ -115,7 +115,7 @@ You can manually query the API using the following structure:
 If your ISP, domain name, or personal IP is falsely flagged and blocked from CoralGate-protected servers, please open a ticket on our [Discord](https://discord.gteam.cloud). Provide the affected IP addresses and their primary use case, and our support team will assist with whitelisting.
 
 **Traffic routinely blocked by the API:**
-Port/IP scanners, crawlers, MOTD/player-count fetchers, VPNs, proxies, TOR exit nodes, and automated hosting services (e.g., Shodan, OpenHeimer).
+Port/IP scanners, crawlers, MOTD/player-count fetchers, VPNs, proxies and automated hosting services (e.g., Shodan, OpenHeimer).
 
 **Traffic exempt from blocking:**
 Known voting sites and verified server lists.
